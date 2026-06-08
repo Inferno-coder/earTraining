@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Volume2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Volume2 } from 'lucide-react';
 import { playNote } from '../../utils/audio';
 
 interface KeyboardKey {
@@ -32,9 +32,10 @@ const blackKeys: KeyboardKey[] = [
 
 interface Level0Props {
   onBack: () => void;
+  onNext: () => void;
 }
 
-export default function Level0({ onBack }: Level0Props) {
+export default function Level0({ onBack, onNext }: Level0Props) {
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [lastPlayedKey, setLastPlayedKey] = useState<KeyboardKey | null>(null);
 
@@ -76,9 +77,18 @@ export default function Level0({ onBack }: Level0Props) {
           <span className="text-sm font-bold text-white tracking-wide">Level 0: Pitch Exploration</span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-          <Volume2 className="w-3.5 h-3.5 text-primary-400" />
-          Octave: C4 - C5
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+            <Volume2 className="w-3.5 h-3.5 text-primary-400" />
+            Octave: C4 - C5
+          </div>
+          <button 
+            onClick={onNext}
+            className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
+          >
+            Go to Level 1
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </header>
 
