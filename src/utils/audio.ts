@@ -81,21 +81,25 @@ export const getFrequency = (baseFreq: number, semitones: number): number => {
 export const initAudio = async () => {
   await Tone.start();
   if (!synth) {
+    // Create an electronic keyboard synth: warm lowpass-filtered sawtooth with instant attack
+    const filter = new Tone.Filter({
+      frequency: 1600,
+      type: "lowpass"
+    }).toDestination();
+
+    const reverb = new Tone.Reverb({ decay: 1.2, wet: 0.18 }).connect(filter);
+
     synth = new Tone.Synth({
       oscillator: {
-        type: 'triangle' // warmer, woodwind-like sound closer to a bansuri (Indian flute)
+        type: 'sawtooth'
       },
       envelope: {
-        attack: 0.08,
+        attack: 0.005, // instant onset for electronic keyboard feel
         decay: 0.15,
-        sustain: 0.75,
-        release: 0.5
+        sustain: 0.8,
+        release: 0.25
       }
-    }).toDestination();
-    
-    // Add a subtle reverb for space and resonance
-    const reverb = new Tone.Reverb({ decay: 1.5, wet: 0.25 }).toDestination();
-    synth.connect(reverb);
+    }).connect(reverb);
   }
 };
 
@@ -104,6 +108,13 @@ export const playSwara = async (baseFreq: number, semitones: number, duration: s
   const freq = getFrequency(baseFreq, semitones);
   if (synth) {
     synth.triggerAttackRelease(freq, duration);
+  }
+};
+
+export const playNote = async (noteName: string, duration: string = '0.5s') => {
+  await initAudio();
+  if (synth) {
+    synth.triggerAttackRelease(noteName, duration);
   }
 };
 
