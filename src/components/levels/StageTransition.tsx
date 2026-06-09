@@ -3,7 +3,7 @@ import { Play, Sparkles, Award } from 'lucide-react';
 import { playNote } from '../../utils/audio';
 
 interface StageTransitionProps {
-  stage: 1 | 2;
+  stage: 1 | 2 | 3 | 4 | 5;
   onBegin: () => void;
 }
 
@@ -19,7 +19,7 @@ export default function StageTransition({ stage, onBegin }: StageTransitionProps
           await playNote('E4', '0.4s');
           await new Promise((resolve) => setTimeout(resolve, 180));
           await playNote('G4', '0.6s');
-        } else {
+        } else if (stage === 2) {
           // Play ascending Sa - Ga - Pa - Sa' arpeggio (C4 - E4 - G4 - C5)
           await playNote('C4', '0.3s');
           await new Promise((resolve) => setTimeout(resolve, 150));
@@ -28,6 +28,35 @@ export default function StageTransition({ stage, onBegin }: StageTransitionProps
           await playNote('G4', '0.3s');
           await new Promise((resolve) => setTimeout(resolve, 150));
           await playNote('C5', '0.6s');
+        } else if (stage === 3) {
+          // Play ascending/descending Sa-Ga-Pa-Sa'-Pa-Ga-Sa arpeggio (C4 - E4 - G4 - C5 - G4 - E4 - C4)
+          await playNote('C4', '0.2s');
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          await playNote('E4', '0.2s');
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          await playNote('G4', '0.2s');
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          await playNote('C5', '0.2s');
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          await playNote('G4', '0.2s');
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          await playNote('E4', '0.2s');
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          await playNote('C4', '0.4s');
+        } else if (stage === 4) {
+          // Play fast ascending full scale (C4 - D4 - E4 - F4 - G4 - A4 - B4 - C5)
+          const scaleNotes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+          for (let i = 0; i < scaleNotes.length; i++) {
+            await playNote(scaleNotes[i], '0.15s');
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        } else {
+          // Play chromatic scale of 12 semitones sequentially (C4 through C5)
+          const chromaticNotes = ['C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4', 'C5'];
+          for (let i = 0; i < chromaticNotes.length; i++) {
+            await playNote(chromaticNotes[i], '0.12s');
+            await new Promise((resolve) => setTimeout(resolve, 80));
+          }
         }
       } catch (err) {
         console.error('Failed to play stage intro melody:', err);
@@ -68,6 +97,51 @@ export default function StageTransition({ stage, onBegin }: StageTransitionProps
         { name: 'Level 3', title: 'Sa - Ri - Ga - Ma - Pa', desc: 'Train across five consecutive diatonic swaras.' },
         { name: 'Level 4', title: 'Dha - Ni Practice', desc: 'Calibrate your ear to the higher register swaras: Dhaivatam and Nishadam.' },
         { name: 'Level 5', title: 'Full Octave Ear Training', desc: 'Identify any swara from the entire octave (Sa to Sa\') with all keys active.' }
+      ]
+    },
+    3: {
+      number: 'STAGE 3',
+      title: 'Melodic Sequence Dictation',
+      subtitle: 'Recognize sequences and melodic phrases.',
+      desc: 'Connect individual swaras into cohesive musical patterns. You will hear sequences of 2, 3, or 4 notes played sequentially and identify the correct swara sequence.',
+      accent: 'from-accent-rose via-amber-500 to-primary-500',
+      glow: 'bg-accent-rose/10',
+      badgeBg: 'bg-rose-500/10 border-rose-500/30 text-accent-rose',
+      levels: [
+        { name: 'Level 1', title: '2-Note Sequence Dictation', desc: 'Identify sequences of 2 notes played sequentially from the full octave.' },
+        { name: 'Level 2', title: '3-Note Sequence Dictation', desc: 'Identify sequences of 3 notes played sequentially.' },
+        { name: 'Level 3', title: '4-Note Sequence Dictation', desc: 'Identify sequences of 4 notes played sequentially.' }
+      ]
+    },
+    4: {
+      number: 'STAGE 4',
+      title: 'Melodic Reconstruction',
+      subtitle: 'Recreate sequential swara phrases from memory.',
+      desc: 'Test your musical memory and dictation recall. You will hear arbitrary sequence patterns of active swaras. Reconstruct them in the exact order they were played.',
+      accent: 'from-accent-amber via-accent-rose to-fuchsia-500',
+      glow: 'bg-fuchsia-600/10',
+      badgeBg: 'bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-300',
+      levels: [
+        { name: 'Level 1', title: 'Melodic Dictation', desc: 'Listen to a sequence from 1 to 7 notes and rebuild it note-by-note using interactive swara pads.' }
+      ]
+    },
+    5: {
+      number: 'STAGE 5',
+      title: 'Swarasthana Mastery',
+      subtitle: 'Master the 12 microtonal swarasthana variations of Carnatic music.',
+      desc: 'Now, transition into microtonal ear training. Master the variants of Rishabham, Gandharam, Madhyamam, Dhaivatam, and Nishadam. Train on individual classifications and sequence dictations.',
+      accent: 'from-fuchsia-500 via-rose-500 to-amber-500',
+      glow: 'bg-rose-600/10',
+      badgeBg: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+      levels: [
+        { name: 'Level 1', title: 'Rishabha Recognition (R1 vs R2)', desc: 'Classify Shuddha Rishabham (R1) vs Chatusruti Rishabham (R2).' },
+        { name: 'Level 2', title: 'Gandhara Recognition (G2 vs G3)', desc: 'Classify Sadharana Gandharam (G2) vs Antara Gandharam (G3).' },
+        { name: 'Level 3', title: 'Madhyama Recognition (M1 vs M2)', desc: 'Classify Shuddha Madhyamam (M1) vs Prati Madhyamam (M2).' },
+        { name: 'Level 4', title: 'Dhaivata Recognition (D1 vs D2)', desc: 'Classify Shuddha Dhaivatam (D1) vs Chatusruti Dhaivatam (D2).' },
+        { name: 'Level 5', title: 'Nishada Recognition (N2 vs N3)', desc: 'Classify Kaisiki Nishadam (N2) vs Kakali Nishadam (N3).' },
+        { name: 'Level 6', title: 'Mixed Swarasthana Recognition', desc: 'Classify any of the 10 swarasthana variations played in isolation.' },
+        { name: 'Level 7', title: 'Swarasthana Sequence Dictation', desc: 'Reconstruct short melodic sequences (2 to 4 notes) containing swarasthanas.' },
+        { name: 'Level 8', title: 'Advanced Swarasthana Dictation', desc: 'Reconstruct longer melodic phrases (4 to 7 notes) containing mixed swarasthanas.' }
       ]
     }
   }[stage];
@@ -118,7 +192,7 @@ export default function StageTransition({ stage, onBegin }: StageTransitionProps
                   style={{ animationDelay: `${200 + index * 100}ms` }}
                 >
                   <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-mono font-bold text-primary-400">
-                    0{index}
+                    0{index + 1}
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -139,7 +213,7 @@ export default function StageTransition({ stage, onBegin }: StageTransitionProps
             className="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white flex items-center justify-center gap-2.5 shadow-lg shadow-primary-600/25 transition-all scale-100 hover:scale-[1.02] cursor-pointer"
           >
             <Play className="w-5 h-5 fill-current" />
-            Begin Stage {stage === 1 ? 'I' : 'II'}
+            Begin Stage {stage === 1 ? 'I' : stage === 2 ? 'II' : stage === 3 ? 'III' : stage === 4 ? 'IV' : 'V'}
           </button>
         </div>
 

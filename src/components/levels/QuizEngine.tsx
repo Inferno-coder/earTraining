@@ -31,6 +31,22 @@ const blackKeys: KeyboardKey[] = [
   { note: 'A#4', label: 'A#', swara: 'Ni₂', swaraFull: 'Kaisiki Nishadam', isBlack: true, leftIndex: 5 }
 ];
 
+const stage5Swaras: Record<string, string> = {
+  'C4': 'Sa',
+  'C#4': 'R1',
+  'D4': 'R2',
+  'D#4': 'G2',
+  'E4': 'G3',
+  'F4': 'M1',
+  'F#4': 'M2',
+  'G4': 'Pa',
+  'G#4': 'D1',
+  'A4': 'D2',
+  'A#4': 'N2',
+  'B4': 'N3',
+  'C5': "Sa'"
+};
+
 interface QuizEngineProps {
   config: QuizConfig;
   onBack: () => void;
@@ -220,6 +236,9 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
                 {whiteKeys.map((key) => {
                   const isEnabled = config.referenceNotes.includes(key.note);
                   const isPressed = activeNote === key.note;
+                  const displaySwara = (config.stage === 5 && isEnabled)
+                    ? stage5Swaras[key.note] || key.swara
+                    : key.swara;
                   return (
                     <button
                       key={key.note}
@@ -242,7 +261,7 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
                         <span className={`block text-xs md:text-sm font-bold font-sans mt-2 ${
                           isEnabled ? 'text-primary-700' : 'text-slate-600'
                         }`}>
-                          {key.swara}
+                          {displaySwara}
                         </span>
                       </div>
                     </button>
@@ -255,6 +274,9 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
                 const isEnabled = config.referenceNotes.includes(key.note);
                 const isPressed = activeNote === key.note;
                 const leftOffset = `calc(12.5% * (${key.leftIndex!} + 1) - 4.2%)`;
+                const displaySwara = (config.stage === 5 && isEnabled)
+                  ? stage5Swaras[key.note] || key.swara
+                  : key.swara;
                 return (
                   <button
                     key={key.note}
@@ -263,18 +285,26 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
                     style={{ left: leftOffset, width: '8.4%' }}
                     className={`absolute h-[62%] rounded-b-xl flex flex-col justify-end items-center pb-3 border-b-4 border-black border-x border-slate-950/40 transition-all z-30 ${
                       isEnabled
-                        ? isPressed
-                          ? 'bg-primary-900 border-t-4 border-primary-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
-                          : 'bg-slate-900 hover:bg-slate-800 border-slate-850 cursor-pointer'
+                        ? config.stage === 5
+                          ? isPressed
+                            ? 'bg-gradient-to-b from-violet-900 to-indigo-950 border-t-4 border-violet-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
+                            : 'bg-gradient-to-b from-indigo-900 to-violet-950 hover:from-indigo-800 hover:to-violet-900 border border-violet-500/55 hover:border-violet-400/80 shadow-[0_0_15px_rgba(139,92,246,0.45)] cursor-pointer'
+                          : isPressed
+                            ? 'bg-primary-900 border-t-4 border-primary-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
+                            : 'bg-slate-900 hover:bg-slate-800 border-slate-850 cursor-pointer'
                         : 'bg-slate-900/10 opacity-20 cursor-not-allowed text-gray-600'
                     }`}
                   >
                     <div className="text-center select-none pointer-events-none">
-                      <span className="block text-sm md:text-base font-extrabold font-serif leading-none">
+                      <span className={`block text-sm md:text-base font-extrabold font-serif leading-none ${
+                        isEnabled && config.stage === 5 ? 'text-violet-100' : ''
+                      }`}>
                         {key.label}
                       </span>
-                      <span className="block text-[9px] md:text-xs font-bold font-sans mt-1.5">
-                        {key.swara}
+                      <span className={`block text-[9px] md:text-xs font-bold font-sans mt-1.5 ${
+                        isEnabled && config.stage === 5 ? 'text-violet-300' : ''
+                      }`}>
+                        {displaySwara}
                       </span>
                     </div>
                   </button>
@@ -311,15 +341,50 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="p-4 bg-slate-950/80 border border-white/10 rounded-2xl text-center space-y-2">
-                    <span className="inline-block w-3 h-3 rounded-full bg-primary-400 animate-pulse"></span>
-                    <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">Mystery Note Active</p>
+                  <div className="p-5 bg-slate-950/80 border border-white/10 rounded-2xl flex flex-col items-center justify-center space-y-4 shadow-inner relative overflow-hidden">
+                    {/* Background glow when playing */}
+                    {isPlaying && (
+                      <div className="absolute inset-0 bg-primary-500/5 filter blur-xl animate-pulse"></div>
+                    )}
+                    
+                    {/* Audio wave animation container */}
+                    <div className="flex items-center justify-center gap-1.5 h-8">
+                      {[1, 2, 3, 4, 5, 6, 7].map((bar) => {
+                        let delay = '0s';
+                        let baseHeight = 'h-3';
+                        if (bar === 1 || bar === 7) { delay = '0.15s'; baseHeight = 'h-2'; }
+                        if (bar === 2 || bar === 6) { delay = '0.3s'; baseHeight = 'h-4'; }
+                        if (bar === 3 || bar === 5) { delay = '0.45s'; baseHeight = 'h-6'; }
+                        if (bar === 4) { delay = '0.2s'; baseHeight = 'h-8'; }
+                        
+                        return (
+                          <div 
+                            key={bar} 
+                            style={{ animationDelay: delay }}
+                            className={`w-1 bg-primary-400 rounded transition-all duration-300 ${baseHeight} ${
+                              isPlaying ? 'animate-pulse scale-y-125' : 'opacity-40'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div className="text-center space-y-1 z-10">
+                      <p className="text-[10px] text-primary-400 font-mono uppercase tracking-widest font-bold">Mystery Note Active</p>
+                      <p className="text-xs text-gray-400 leading-none">Listen and choose your answer below</p>
+                    </div>
+
                     <button
                       disabled={isPlaying}
                       onClick={replayMysteryNote}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-400 hover:text-primary-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`w-full py-3 rounded-xl font-bold text-xs tracking-wider uppercase border transition-all flex items-center justify-center gap-2 cursor-pointer z-10 ${
+                        isPlaying
+                          ? 'bg-slate-900 border-white/5 text-gray-500 cursor-not-allowed'
+                          : 'bg-primary-600 hover:bg-primary-500 border-primary-500 text-white shadow-md shadow-primary-600/20 scale-100 hover:scale-[1.02]'
+                      }`}
                     >
-                      <RefreshCw className="w-3.5 h-3.5" /> Replay Sound
+                      <RefreshCw className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin' : ''}`} />
+                      {isPlaying ? 'Playing...' : 'Replay Sound'}
                     </button>
                   </div>
 
@@ -334,7 +399,7 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
                   <div className="space-y-3">
                     <span className="text-xs font-mono text-gray-400 uppercase tracking-widest block text-left">Which note did you hear?</span>
                     <div className={`grid ${gridColClass} gap-3`}>
-                      {config.choices.map((choiceName) => {
+                      {(((targetNote && targetNote.choices) || config.choices || []) as string[]).map((choiceName) => {
                         const isSelected = selectedGuess === choiceName;
                         const isCorrectAnswer = config.checkAnswer(targetNote, choiceName).isCorrect;
                         const showResult = feedback.status !== 'idle';

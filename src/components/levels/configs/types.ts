@@ -22,3 +22,18 @@ export interface QuizConfig {
   // Optional custom tutorial modal overlay to show before the quiz begins
   tutorialPopup?: (onClose: () => void) => React.ReactNode;
 }
+
+export interface ReconstructionConfig {
+  stage: number;
+  level: number;
+  title: string;
+  subtitle: string;
+  enabledNotesLabel: string;
+  notesList: string[]; // List of note pitches to choose from (e.g. ['C4', 'C#4', 'D4'...])
+  swaraButtons: string[]; // List of swara button labels to show (e.g. ['Sa', 'R1', 'R2'...])
+  noteToSwara: Record<string, string>;
+  swaraToNote: Record<string, string>;
+  minLength: number;
+  maxLength: number;
+  defaultLength: number;
+}

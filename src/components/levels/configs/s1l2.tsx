@@ -22,10 +22,15 @@ const noteIndex = (note: string) => whiteKeysList.indexOf(note);
 const StaircaseDiagram: React.FC = () => {
   const [activeStep, setActiveStep] = useState<{ idx: number; dir: 'asc' | 'desc' } | null>(null);
   const [isMelodyPlaying, setIsMelodyPlaying] = useState(false);
+  const [exampleActivePair, setExampleActivePair] = useState<[number, number] | null>(null);
+  const [exampleCurrentStepIndex, setExampleCurrentStepIndex] = useState<number | null>(null);
+  const [exampleAnswer, setExampleAnswer] = useState<string | null>(null);
 
   const playScale = async (direction: 'asc' | 'desc') => {
     if (isMelodyPlaying) return;
     setIsMelodyPlaying(true);
+    setExampleActivePair(null);
+    setExampleAnswer(null);
 
     const notes = direction === 'asc' 
       ? ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']
@@ -42,6 +47,59 @@ const StaircaseDiagram: React.FC = () => {
     }
 
     setActiveStep(null);
+    setIsMelodyPlaying(false);
+  };
+
+  const playExample = async (direction: 'higher' | 'lower') => {
+    if (isMelodyPlaying) return;
+    setIsMelodyPlaying(true);
+    setExampleAnswer(null);
+    setActiveStep(null);
+
+    let idx1: number;
+    let idx2: number;
+
+    if (direction === 'higher') {
+      // Pick random starting index from 0 to 6
+      idx1 = Math.floor(Math.random() * (whiteKeysList.length - 1));
+      idx2 = idx1 + 1;
+    } else {
+      // Pick random starting index from 1 to 7
+      idx1 = 1 + Math.floor(Math.random() * (whiteKeysList.length - 1));
+      idx2 = idx1 - 1;
+    }
+
+    const n1 = whiteKeysList[idx1];
+    const n2 = whiteKeysList[idx2];
+    setExampleActivePair([idx1, idx2]);
+
+    // Play Note 1
+    setExampleCurrentStepIndex(idx1);
+    try {
+      await playNote(n1, '0.5s');
+    } catch (err) {
+      console.error('Example playback failed for note 1:', err);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 650));
+
+    // Play Note 2
+    setExampleCurrentStepIndex(idx2);
+    try {
+      await playNote(n2, '0.5s');
+    } catch (err) {
+      console.error('Example playback failed for note 2:', err);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 650));
+
+    // Evaluate answer and construct message
+    const isHigher = idx2 > idx1;
+    const directionStr = isHigher ? 'Higher (ascending ↗)' : 'Lower (descending ↘)';
+    const swara1 = noteToSwara[n1];
+    const swara2 = noteToSwara[n2];
+    
+    setExampleAnswer(`Note 1 is "${swara1}" and Note 2 is "${swara2}". Since "${swara2}" is ${isHigher ? 'higher' : 'lower'} than "${swara1}", the correct answer is "${directionStr}".`);
+    
+    setExampleCurrentStepIndex(null);
     setIsMelodyPlaying(false);
   };
 
@@ -129,7 +187,13 @@ const StaircaseDiagram: React.FC = () => {
 
         {/* Ascending Swara Nodes */}
         {ascSteps.map((step, idx) => {
-          const isHighlighted = activeStep && activeStep.dir === 'asc' && activeStep.idx === idx;
+          const isScaleHighlighted = activeStep && activeStep.dir === 'asc' && activeStep.idx === idx;
+          const isExampleHighlighted = 
+            exampleActivePair && 
+            (exampleActivePair[1] > exampleActivePair[0]) &&
+            (exampleCurrentStepIndex === idx);
+          
+          const isHighlighted = isScaleHighlighted || isExampleHighlighted;
           return (
             <g key={`asc-node-${idx}`}>
               <circle 
@@ -157,7 +221,13 @@ const StaircaseDiagram: React.FC = () => {
 
         {/* Descending Swara Nodes */}
         {descSteps.map((step, idx) => {
-          const isHighlighted = activeStep && activeStep.dir === 'desc' && activeStep.idx === idx;
+          const isScaleHighlighted = activeStep && activeStep.dir === 'desc' && activeStep.idx === idx;
+          const isExampleHighlighted = 
+            exampleActivePair && 
+            (exampleActivePair[1] < exampleActivePair[0]) &&
+            (exampleCurrentStepIndex === (7 - idx));
+          
+          const isHighlighted = isScaleHighlighted || isExampleHighlighted;
           return (
             <g key={`desc-node-${idx}`}>
               <circle 
@@ -185,23 +255,50 @@ const StaircaseDiagram: React.FC = () => {
       </svg>
 
       {/* Interactive listening buttons */}
-      <div className="flex gap-4 w-full max-w-xs justify-center pt-2">
-        <button
-          disabled={isMelodyPlaying}
-          onClick={() => playScale('asc')}
-          className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-primary-600/20 hover:bg-primary-600/35 border border-primary-500/40 text-primary-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Play className="w-3.5 h-3.5 fill-current" />
-          Listen: Ascending
-        </button>
-        <button
-          disabled={isMelodyPlaying}
-          onClick={() => playScale('desc')}
-          className="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-accent-rose/20 hover:bg-accent-rose/35 border border-accent-rose/40 text-accent-rose transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Play className="w-3.5 h-3.5 fill-current" />
-          Listen: Descending
-        </button>
+      <div className="flex flex-col gap-3.5 w-full max-w-sm pt-2">
+        <div className="flex gap-2 w-full justify-center">
+          <button
+            disabled={isMelodyPlaying}
+            onClick={() => playScale('asc')}
+            className="flex-1 py-2 px-2.5 text-[10px] font-bold rounded-xl bg-primary-600/20 hover:bg-primary-600/35 border border-primary-500/30 text-primary-300 transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-3.5 h-3.5 fill-current animate-pulse" />
+            Scale: Up ↗
+          </button>
+          <button
+            disabled={isMelodyPlaying}
+            onClick={() => playScale('desc')}
+            className="flex-1 py-2 px-2.5 text-[10px] font-bold rounded-xl bg-accent-rose/20 hover:bg-accent-rose/35 border border-accent-rose/40 text-accent-rose transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-3.5 h-3.5 fill-current animate-pulse" />
+            Scale: Down ↘
+          </button>
+        </div>
+        <div className="flex gap-2 w-full justify-center">
+          <button
+            disabled={isMelodyPlaying}
+            onClick={() => playExample('higher')}
+            className="flex-1 py-2 px-2.5 text-[10px] font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-accent-amber transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-3.5 h-3.5 fill-current animate-pulse" />
+            Higher Example ↗
+          </button>
+          <button
+            disabled={isMelodyPlaying}
+            onClick={() => playExample('lower')}
+            className="flex-1 py-2 px-2.5 text-[10px] font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-accent-amber transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Play className="w-3.5 h-3.5 fill-current animate-pulse" />
+            Lower Example ↘
+          </button>
+        </div>
+
+        {exampleAnswer && (
+          <div className="p-3 bg-slate-900/90 border border-white/5 rounded-xl text-center text-xs text-accent-amber font-serif leading-relaxed animate-fade-in-up">
+            <span className="font-sans text-[9px] text-gray-500 font-mono uppercase tracking-wider block mb-1">Example Result</span>
+            {exampleAnswer}
+          </div>
+        )}
       </div>
     </div>
   );
