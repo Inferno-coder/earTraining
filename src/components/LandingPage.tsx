@@ -5,7 +5,11 @@ import {
   ChevronRight,
   Shield,
   Sliders,
-  Zap
+  Zap,
+  BookOpen,
+  X,
+  Award,
+  Sparkles
 } from 'lucide-react';
 
 type RagaName = 'Mayamalavagowla' | 'Shankarabharanam' | 'Kharaharapriya' | 'Kalyani';
@@ -81,6 +85,8 @@ interface LandingPageProps {
 
 export default function LandingPage({ onLaunch }: LandingPageProps) {
   const [selectedRaga, setSelectedRaga] = useState<RagaName>('Mayamalavagowla');
+  const [showCurriculumModal, setShowCurriculumModal] = useState(false);
+  const [activeTab, setActiveTab] = useState(1);
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-primary-500 selection:text-white">
@@ -107,6 +113,13 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           <a href="#features" className="hover:text-white transition-colors">Features</a>
           <a href="#raga-explorer" className="hover:text-white transition-colors">Raga Scales</a>
           <a href="#methodology" className="hover:text-white transition-colors">How it Works</a>
+          <button 
+            onClick={() => setShowCurriculumModal(true)}
+            className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
+          >
+            <BookOpen className="w-4 h-4 text-primary-400" />
+            Curriculum
+          </button>
         </nav>
 
         <div>
@@ -151,6 +164,17 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 <ArrowRight className="w-4 h-4" />
               </button>
               
+              <button
+                onClick={() => {
+                  setActiveTab(1);
+                  setShowCurriculumModal(true);
+                }}
+                className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold bg-primary-500/10 hover:bg-primary-500/20 border border-primary-500/20 text-primary-300 transition-all cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4" />
+                View Curriculum
+              </button>
+
               <a
                 href="#raga-explorer"
                 className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
@@ -265,20 +289,20 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <div className="w-12 h-12 rounded-xl bg-primary-500/10 border border-primary-500/25 flex items-center justify-center text-primary-400 mb-6 shadow-inner">
                 <Music className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold mb-2">Interactive Swara Board</h3>
+              <h3 className="text-lg font-bold mb-2">Sandbox Pitch Keyboard</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Interact with the full chromatic range of saptaswaras. Shift base pitch (Sruti) and ragas seamlessly, hearing intervals adapt instantly.
+                Explore the foundational C4-C5 octave sandbox. Click white and black keys to hear synthesized pitches and examine relative swara mappings.
               </p>
             </div>
 
             {/* Feature 2 */}
             <div className="glass rounded-2xl p-6 text-left border-white/5 glass-hover">
               <div className="w-12 h-12 rounded-xl bg-accent-rose/10 border border-accent-rose/25 flex items-center justify-center text-accent-rose mb-6 shadow-inner">
-                <Sliders className="w-6 h-6" />
+                <BookOpen className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold mb-2">Vocal Sadhana Tuner</h3>
+              <h3 className="text-lg font-bold mb-2">5-Stage Curriculum</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Sing directly into your browser. Our algorithm translates frequency inputs into Swarasthanas, tracking pitch offsets in real-time.
+                Follow a progressive, structured syllabus. Learn sequentially from relative pitch and direction up to complex dictations.
               </p>
             </div>
 
@@ -287,20 +311,20 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-accent-amber mb-6 shadow-inner">
                 <Sliders className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold mb-2">Synthesized Tanpura</h3>
+              <h3 className="text-lg font-bold mb-2">Sequence Reconstruction</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Practice against a rich, continuous acoustic-model tanpura drone with adjustable harmonics (Panchamam, Madhyamam, or Nishadam).
+                Transcribe and reconstruct melodic phrases note-by-note using color-coded swara pads. Control dictation speed settings dynamically.
               </p>
             </div>
 
             {/* Feature 4 */}
             <div className="glass rounded-2xl p-6 text-left border-white/5 glass-hover">
               <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/25 flex items-center justify-center text-green-400 mb-6 shadow-inner">
-                <Zap className="w-6 h-6" />
+                <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold mb-2">Gamified Ear Training</h3>
+              <h3 className="text-lg font-bold mb-2">Swarasthana & Tanpura</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Challenge yourself with ascending/descending pitch identifier quizzes, melodic contour games, and adaptive difficulty levels.
+                Master microtonal swarasthanas (R1/R2, G2/G3...) using focused binary reference keyboards, supported by an ambient Tanpura drone.
               </p>
             </div>
 
@@ -392,9 +416,9 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <div className="w-10 h-10 rounded-lg bg-primary-600/10 border border-primary-500/20 flex items-center justify-center font-mono font-bold text-primary-400">
                 01
               </div>
-              <h3 className="text-lg font-bold">Drone Alignment</h3>
+              <h3 className="text-lg font-bold">Auditory Calibration</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Establish your baseline. Anchor your senses with the continuous Tanpura drone, accustoming your ear to the fundamental cosmic pitch (Shadjam).
+                Establish your baseline pitch. Play note pitches in the Sandbox keyboard or toggle the ambient synthetic Tanpura drone in the reconstruction game to anchor your ears to the Adhara Shadjam (Sa).
               </p>
             </div>
 
@@ -403,9 +427,9 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <div className="w-10 h-10 rounded-lg bg-accent-rose/10 border border-accent-rose/20 flex items-center justify-center font-mono font-bold text-accent-rose">
                 02
               </div>
-              <h3 className="text-lg font-bold">Interactive Sound Map</h3>
+              <h3 className="text-lg font-bold">Focused Training Levels</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Map the raga coordinates. Click through swara buttons to hear their relative intervals and read their historical placements and descriptions.
+                Build relative pitch skills step-by-step. Classify adjacent note directions (Same/Different, Higher/Lower), identify absolute swaras, and isolate microtonal swarasthanas (R1/R2, G2/G3...) on focused keyboards.
               </p>
             </div>
 
@@ -414,9 +438,9 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-mono font-bold text-accent-amber">
                 03
               </div>
-              <h3 className="text-lg font-bold">Active Singing Calibration</h3>
+              <h3 className="text-lg font-bold">Melodic Recall & Reconstruction</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Sing and confirm. Use the real-time pitch feedback engine to check if your vocals are sharp, flat, or aligning perfectly with the target Swara.
+                Transcribe complex classical phrases. Listen to sequences of notes at slow, medium, or fast tempos, and input them sequentially using color-coded swara pads to build active melodic recall.
               </p>
             </div>
 
@@ -454,11 +478,208 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           <a href="#features" className="hover:text-primary-400 transition-colors">Features</a>
           <a href="#raga-explorer" className="hover:text-primary-400 transition-colors">Scales</a>
           <a href="#methodology" className="hover:text-primary-400 transition-colors">Methodology</a>
+          <button onClick={() => setShowCurriculumModal(true)} className="hover:text-primary-400 transition-colors">Curriculum</button>
           <a href="#" className="hover:text-primary-400 transition-colors flex items-center gap-1 font-sans"><Shield className="w-3.5 h-3.5" /> Privacy</a>
         </div>
         <p>© 2026 SvaraSadhana. Empowering Indian Classical Music Ear Training.</p>
         <p className="text-[10px] text-gray-600">Built using React, Vite, and Tailwind CSS v4.</p>
       </footer>
+
+      {/* Curriculum / Syllabus Modal Overlay */}
+      {showCurriculumModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 cursor-pointer" 
+            onClick={() => setShowCurriculumModal(false)}
+          />
+          
+          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col relative shadow-2xl z-10 animate-fade-in-up">
+            {/* Header */}
+            <div className="p-6 border-b border-white/5 flex justify-between items-start">
+              <div>
+                <h3 className="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2">
+                  <Award className="w-6 h-6 text-accent-amber" />
+                  SvaraSadhana Ear Training Path
+                </h3>
+                <p className="text-gray-400 text-xs md:text-sm mt-1">
+                  A systematic 5-stage training path from absolute pitch basics to Carnatic microtonal mastery.
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowCurriculumModal(false)}
+                className="bg-white/5 hover:bg-white/10 border border-white/10 p-2 rounded-xl text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tabs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 flex-1 overflow-hidden">
+              
+              {/* Left Column Tabs Selector */}
+              <div className="bg-slate-950/50 p-4 border-r border-white/5 space-y-2 overflow-y-auto max-h-[20vh] md:max-h-none">
+                {[
+                  { id: 1, name: "Stage 1", title: "Pitch Basics", label: "Fundamentals" },
+                  { id: 2, name: "Stage 2", title: "Saptaswaras", label: "Identification" },
+                  { id: 3, name: "Stage 3", title: "Sequence dict.", label: "Relative Pitch" },
+                  { id: 4, name: "Stage 4", title: "Reconstruction", label: "Melodic Memory" },
+                  { id: 5, name: "Stage 5", title: "Swarasthanas", label: "Microtonal" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full text-left p-3.5 rounded-2xl transition-all cursor-pointer flex flex-col gap-1 ${
+                      activeTab === tab.id
+                        ? 'bg-primary-600/20 border border-primary-500/40 text-white shadow-inner'
+                        : 'hover:bg-white/5 border border-transparent text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-primary-400">{tab.name}</span>
+                    <span className="text-sm font-bold leading-tight">{tab.title}</span>
+                    <span className="text-[10px] text-gray-500 font-mono">{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Right Column Content Area */}
+              <div className="col-span-3 p-6 overflow-y-auto space-y-6 max-h-[50vh] md:max-h-[60vh]">
+                
+                {/* Stage Title and Summary */}
+                <div className="space-y-2 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-primary-500/10 border border-primary-500/20 text-primary-300">
+                      Stage {activeTab} of 5
+                    </span>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-xs text-accent-amber font-mono font-bold flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {activeTab === 1 && "Relative Pitch Calibrations"}
+                      {activeTab === 2 && "Absolute Scale Anchors"}
+                      {activeTab === 3 && "Aural Recall Training"}
+                      {activeTab === 4 && "Melodic Dictation Loop"}
+                      {activeTab === 5 && "12-Semitone Mastery"}
+                    </span>
+                  </div>
+                  <h4 className="text-xl font-extrabold text-white">
+                    {activeTab === 1 && "Stage 1: Pitch Fundamentals"}
+                    {activeTab === 2 && "Stage 2: Swara Identification"}
+                    {activeTab === 3 && "Stage 3: Melodic Sequence Dictation"}
+                    {activeTab === 4 && "Stage 4: Sequence Dictation & Memory"}
+                    {activeTab === 5 && "Stage 5: Swarasthana Mastery (Microtonal)"}
+                  </h4>
+                  <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+                    {activeTab === 1 && "Build a strong foundation. These exercises train your ears to identify basic differences in relative frequency and directions without naming them yet."}
+                    {activeTab === 2 && "Map pitches to Carnatic classical swara labels. Train your mind to link auditory pitches with their corresponding musical syllables."}
+                    {activeTab === 3 && "Extend your retention span. Transcribe multi-note patterns sequentially, training the brain to store and identify continuous melodic contours."}
+                    {activeTab === 4 && "Active reconstruction sandbox. Rebuild phrases step-by-step from audio memory, utilizing interactive swara pads with user-defined tempo speeds."}
+                    {activeTab === 5 && "The ultimate classical challenge. Identify microtonal variations (swarasthanas) for Ri, Ga, Ma, Dha, and Ni, distinguishing between closely related pitch degrees."}
+                  </p>
+                </div>
+
+                {/* Levels Timeline */}
+                <div className="space-y-4">
+                  <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest block text-left">Stage Levels</span>
+                  
+                  <div className="space-y-3">
+                    {activeTab === 1 && [
+                      { level: "Level 0", title: "Pitch Exploration Sandbox", desc: "Interact with white and black keys to examine C4 to C5 pitches and see their Carnatic equivalents." },
+                      { level: "Level 1", title: "Same or Different?", desc: "Hear two consecutive pitches played sequentially and identify if they are identical or different." },
+                      { level: "Level 2", title: "Higher or Lower?", desc: "Hear two adjacent notes and determine if the second goes up (Aarohanam) or down (Avarohanam)." }
+                    ].map((lvl, i) => (
+                      <div key={i} className="flex gap-4 p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl">
+                        <span className="h-6 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold shrink-0">{lvl.level}</span>
+                        <div className="space-y-0.5 text-left">
+                          <h5 className="text-xs md:text-sm font-bold text-white">{lvl.title}</h5>
+                          <p className="text-gray-400 text-xs leading-relaxed">{lvl.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {activeTab === 2 && [
+                      { level: "Level 1", title: "Anchor Notes (Sa - Pa)", desc: "Identify Shadjam (Sa) and Panchamam (Pa), the absolute pitch anchors in Carnatic classical music." },
+                      { level: "Level 2", title: "Perfect Fourth Anchor (Sa - Ma - Pa)", desc: "Differentiate between Sa, Pa, and Shuddha Madhyamam (Ma)." },
+                      { level: "Level 3", title: "Lower Register (Sa - Ri - Ga - Ma - Pa)", desc: "Distinguish the first five natural white keys of the scale." },
+                      { level: "Level 4", title: "Upper Register (Dha - Ni)", desc: "Focused training on identifying Dhaivatam (Dha) and Nishadam (Ni)." },
+                      { level: "Level 5", title: "Full Octave Swara Board", desc: "Identify all 8 natural white-key swaras of the scale across the octave." }
+                    ].map((lvl, i) => (
+                      <div key={i} className="flex gap-4 p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl">
+                        <span className="h-6 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold shrink-0">{lvl.level}</span>
+                        <div className="space-y-0.5 text-left">
+                          <h5 className="text-xs md:text-sm font-bold text-white">{lvl.title}</h5>
+                          <p className="text-gray-400 text-xs leading-relaxed">{lvl.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {activeTab === 3 && [
+                      { level: "Level 1", title: "2-Note Sequence Dictation", desc: "Listen to 2-note sequences and select the correct swara labels from multiple-choice choices." },
+                      { level: "Level 2", title: "3-Note Sequence Dictation", desc: "Reconstruct 3-note relative pitch sequences sequentially." },
+                      { level: "Level 3", title: "4-Note Sequence Dictation", desc: "Transcribe 4-note melodic sequences sequentially." }
+                    ].map((lvl, i) => (
+                      <div key={i} className="flex gap-4 p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl">
+                        <span className="h-6 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold shrink-0">{lvl.level}</span>
+                        <div className="space-y-0.5 text-left">
+                          <h5 className="text-xs md:text-sm font-bold text-white">{lvl.title}</h5>
+                          <p className="text-gray-400 text-xs leading-relaxed">{lvl.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {activeTab === 4 && [
+                      { level: "Level 1", title: "Interactive Melodic Reconstruction", desc: "Listen to sequence phrases and reconstruct them note-by-note using direct swara pads. Control speed parameters (slow, medium, fast) to adapt learning pace." }
+                    ].map((lvl, i) => (
+                      <div key={i} className="flex gap-4 p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl">
+                        <span className="h-6 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold shrink-0">{lvl.level}</span>
+                        <div className="space-y-0.5 text-left">
+                          <h5 className="text-xs md:text-sm font-bold text-white">{lvl.title}</h5>
+                          <p className="text-gray-400 text-xs leading-relaxed">{lvl.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {activeTab === 5 && [
+                      { level: "Level 1", title: "Rishabha Recognition (R1 vs R2)", desc: "Differentiate Shuddha Rishabham (R1) from Chatusruti Rishabham (R2). Active reference keys on the keyboard are locked strictly to target notes." },
+                      { level: "Level 2", title: "Gandhara Recognition (G2 vs G3)", desc: "Differentiate Sadharana Gandharam (G2) from Antara Gandharam (G3)." },
+                      { level: "Level 3", title: "Madhyama Recognition (M1 vs M2)", desc: "Differentiate Shuddha Madhyamam (M1) from Prati Madhyamam (M2)." },
+                      { level: "Level 4", title: "Dhaivata Recognition (D1 vs D2)", desc: "Differentiate Shuddha Dhaivatam (D1) from Chatusruti Dhaivatam (D2)." },
+                      { level: "Level 5", title: "Nishada Recognition (N2 vs N3)", desc: "Differentiate Kaisiki Nishadam (N2) from Kakali Nishadam (N3)." },
+                      { level: "Level 6", title: "Mixed Swarasthana Identification", desc: "Classify single target notes randomly played from all 10 swarasthana variations." },
+                      { level: "Level 7", title: "Swarasthana Phrase Dictation", desc: "Reconstruct short melodies containing swarasthana variations note-by-note." },
+                      { level: "Level 8", title: "Advanced Phrase Dictation", desc: "Dictate complex microtonal patterns from memory using 13 active swara keys." }
+                    ].map((lvl, i) => (
+                      <div key={i} className="flex gap-4 p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl">
+                        <span className="h-6 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold shrink-0">{lvl.level}</span>
+                        <div className="space-y-0.5 text-left">
+                          <h5 className="text-xs md:text-sm font-bold text-white">{lvl.title}</h5>
+                          <p className="text-gray-400 text-xs leading-relaxed">{lvl.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer Launch CTA */}
+            <div className="p-4 bg-slate-950/80 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <span className="text-[10px] font-mono text-gray-500">
+                SvaraSadhana Ear Training Academy • Version 1.0
+              </span>
+              <button
+                onClick={() => {
+                  setShowCurriculumModal(false);
+                  onLaunch();
+                }}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white transition-all shadow-md shadow-primary-600/20 cursor-pointer"
+              >
+                Start Training Now
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

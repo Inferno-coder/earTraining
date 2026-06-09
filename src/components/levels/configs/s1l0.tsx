@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Volume2 } from 'lucide-react';
 import { playNote } from '../../../utils/audio';
 
@@ -38,6 +38,15 @@ interface Stage1Level0Props {
 export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [lastPlayedKey, setLastPlayedKey] = useState<KeyboardKey | null>(null);
+  const [tourStep, setTourStep] = useState<number>(0);
+
+  // Auto-start tour if not completed before
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('exploreTourCompleted');
+    if (!tourCompleted) {
+      setTourStep(1);
+    }
+  }, []);
 
   const handlePlayKey = async (key: KeyboardKey) => {
     setActiveNote(key.note);
@@ -54,6 +63,30 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
     }, 400);
   };
 
+  const handleNextStep = () => {
+    if (tourStep < 3) {
+      setTourStep(prev => prev + 1);
+    } else {
+      localStorage.setItem('exploreTourCompleted', 'true');
+      setTourStep(0);
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (tourStep > 1) {
+      setTourStep(prev => prev - 1);
+    }
+  };
+
+  const skipTour = () => {
+    localStorage.setItem('exploreTourCompleted', 'true');
+    setTourStep(0);
+  };
+
+  const startTour = () => {
+    setTourStep(1);
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans relative overflow-x-hidden selection:bg-primary-500 selection:text-white">
       
@@ -61,11 +94,25 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
       <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-primary-600 filter blur-3xl opacity-10 animate-pulse-slow"></div>
       <div className="absolute top-2/3 right-1/4 w-96 h-96 rounded-full bg-accent-rose filter blur-3xl opacity-10 animate-pulse-slow"></div>
 
+      {/* Tour Backdrop Overlay */}
+      {tourStep > 0 && (
+        <div 
+          onClick={skipTour} 
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-[99] transition-all duration-300 cursor-pointer"
+        />
+      )}
+
       {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
+      <header className={`sticky top-0 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center transition-all duration-300 ${
+        tourStep === 2 || tourStep === 3 ? 'z-[101]' : 'z-50'
+      }`}>
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
+          className={`flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-all cursor-pointer group ${
+            tourStep === 2 
+              ? 'relative z-[102] bg-slate-900 border border-white/10 px-3 py-1.5 rounded-xl ring-4 ring-primary-500 shadow-[0_0_15px_rgba(139,92,246,0.5)]' 
+              : ''
+          }`}
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           Back to Home
@@ -84,7 +131,11 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
           </div>
           <button 
             onClick={onNext}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
+            className={`flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all cursor-pointer shadow-md shadow-primary-600/20 ${
+              tourStep === 3 
+                ? 'relative z-[102] ring-4 ring-primary-500 shadow-[0_0_15px_rgba(139,92,246,0.5)]' 
+                : ''
+            }`}
           >
             Go to Level 1
             <ArrowRight className="w-3.5 h-3.5" />
@@ -132,7 +183,11 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
         </div>
 
         {/* Keyboard Container */}
-        <div className="w-full max-w-3xl relative select-none">
+        <div className={`w-full max-w-3xl relative select-none transition-all duration-300 ${
+          tourStep === 1 
+            ? 'z-[101] relative ring-4 ring-primary-500 rounded-3xl shadow-[0_0_25px_rgba(139,92,246,0.4)]' 
+            : ''
+        }`}>
           
           {/* The Piano Keys */}
           <div className="w-full bg-slate-950 p-4 border border-white/10 rounded-3xl shadow-2xl relative flex aspect-[16/7] md:aspect-[16/6] z-20">
@@ -199,11 +254,71 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
         </div>
 
         {/* Quick Level 0 Instructions */}
-        <div className="max-w-md bg-white/5 border border-white/5 p-4 rounded-xl text-center text-xs text-gray-400 font-mono">
-          💡 Keyboard uses 12-Tone Equal Temperament tuning starting at C4 (261.63 Hz) representing the basic Shadjam (Sa) drone anchor.
+        <div className="flex flex-col items-center gap-4 max-w-md w-full">
+          <div className="bg-white/5 border border-white/5 p-4 rounded-xl text-center text-xs text-gray-400 font-mono w-full">
+            💡 Keyboard uses 12-Tone Equal Temperament tuning starting at C4 (261.63 Hz) representing the basic Shadjam (Sa) drone anchor.
+          </div>
+          <button
+            onClick={startTour}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600/10 hover:bg-primary-600/20 border border-primary-500/20 text-primary-300 hover:text-primary-200 text-xs font-bold font-mono transition-all duration-100 shadow-lg shadow-black/20 cursor-pointer"
+          >
+            💡 Meet Svara Guru & Start Guide
+          </button>
         </div>
 
       </main>
+
+      {/* Onboarding Tour Card */}
+      {tourStep > 0 && (
+        <div className="fixed bottom-6 inset-x-4 md:inset-x-auto md:bottom-10 md:right-10 z-[101] max-w-lg bg-slate-900/95 border border-white/10 p-5 rounded-3xl shadow-2xl flex flex-col sm:flex-row gap-4 items-center sm:items-start backdrop-blur-md animate-fade-in-up">
+          <div className="flex-shrink-0 bg-slate-950 p-2 rounded-2xl border border-white/5 shadow-inner">
+            <SvaraGuruSVG />
+          </div>
+          <div className="flex-1 text-center sm:text-left space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-mono text-primary-400 font-bold uppercase tracking-wider">
+                Guide • Step {tourStep} of 3
+              </span>
+              <button 
+                onClick={skipTour}
+                className="text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+              >
+                Skip Guide
+              </button>
+            </div>
+            
+            <div className="space-y-1.5">
+              <h4 className="text-base font-extrabold text-white">
+                {tourStep === 1 && "🎹 Explore the Keyboard"}
+                {tourStep === 2 && "🏠 Navigation: Back to Home"}
+                {tourStep === 3 && "🎯 Navigation: Go to Level 1"}
+              </h4>
+              <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+                {tourStep === 1 && "Welcome to SvaraSadhana! Start by clicking any white or black key on the keyboard. Hear the synthesized note and see how Western notes match their Carnatic Swaras."}
+                {tourStep === 2 && "Click 'Back to Home' at the top-left anytime you want to exit this lesson, review other stages, or check your profile progress."}
+                {tourStep === 3 && "Once you have practiced and calibrated your ears, click 'Go to Level 1' in the top-right to start your first pitch discrimination quiz!"}
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              {tourStep > 1 && (
+                <button
+                  onClick={handlePrevStep}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-gray-300 hover:text-white border border-white/10 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                onClick={handleNextStep}
+                className="px-4 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white rounded-xl shadow-md shadow-primary-600/25 transition-all cursor-pointer flex items-center gap-1"
+              >
+                {tourStep === 3 ? "Explore Now! 🎉" : "Next Step ➔"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
@@ -213,3 +328,73 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
     </div>
   );
 }
+
+// Wise & Friendly Classical Music Guide Avatar
+function SvaraGuruSVG() {
+  return (
+    <svg viewBox="0 0 100 100" className="w-20 h-20 sm:w-24 sm:h-24 drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]">
+      <defs>
+        {/* Guru skin gradient */}
+        <radialGradient id="guruGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffedd5" />
+          <stop offset="70%" stopColor="#fed7aa" />
+          <stop offset="100%" stopColor="#fdba74" />
+        </radialGradient>
+        {/* Tilak/Bindi gradient */}
+        <linearGradient id="tilakGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#b91c1c" />
+        </linearGradient>
+        {/* Headphones neon gradient */}
+        <linearGradient id="phoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#8b5cf6" />
+        </linearGradient>
+      </defs>
+      
+      {/* Topknot / Traditional Bun */}
+      <circle cx="50" cy="22" r="10" fill="#ea580c" className="animate-bounce" style={{ animationDuration: '3s' }} />
+      <circle cx="50" cy="28" r="6" fill="#f97316" />
+      {/* Bun decoration - gold bead */}
+      <circle cx="50" cy="16" r="3" fill="#fbbf24" />
+      
+      {/* Ears */}
+      <circle cx="20" cy="55" r="7" fill="#fdba74" />
+      <circle cx="80" cy="55" r="7" fill="#fdba74" />
+      
+      {/* Face */}
+      <circle cx="50" cy="55" r="28" fill="url(#guruGrad)" stroke="#ea580c" strokeWidth="1.5" />
+      
+      {/* Wise Guru white beard */}
+      <path d="M28,68 Q50,95 72,68 Q50,78 28,68 Z" fill="#fff" stroke="#e2e8f0" strokeWidth="1" className="animate-pulse" />
+      
+      {/* Traditional Tilak (Bindi) on forehead */}
+      <path d="M50,34 Q47,43 50,47 Q53,43 50,34 Z" fill="url(#tilakGrad)" />
+      <circle cx="50" cy="49" r="1.5" fill="#fbbf24" />
+      
+      {/* Peaceful closed eyes (Meditation/Listening vibe) */}
+      <path d="M32,54 Q40,58 43,53" fill="none" stroke="#431407" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M68,54 Q60,58 57,53" fill="none" stroke="#431407" strokeWidth="2.5" strokeLinecap="round" />
+      
+      {/* Eyebrows */}
+      <path d="M30,48 Q37,45 42,50" fill="none" stroke="#431407" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M70,48 Q63,45 58,50" fill="none" stroke="#431407" strokeWidth="1.5" strokeLinecap="round" />
+      
+      {/* Cute happy smile */}
+      <path d="M44,64 Q50,70 56,64" fill="none" stroke="#b91c1c" strokeWidth="2.5" strokeLinecap="round" className="animate-pulse" />
+      
+      {/* Neon headphones band */}
+      <path d="M22,50 A28,28 0 0,1 78,50" fill="none" stroke="url(#phoneGrad)" strokeWidth="4" strokeLinecap="round" />
+      
+      {/* Headphones ear pads (glowing) */}
+      <rect x="14" y="46" width="8" height="18" rx="4" fill="#8b5cf6" stroke="#a78bfa" strokeWidth="1" />
+      <rect x="78" y="46" width="8" height="18" rx="4" fill="#8b5cf6" stroke="#a78bfa" strokeWidth="1" />
+      
+      {/* Sound waves emitted from headphones (glowing arcs) */}
+      <path d="M8,55 A22,22 0 0,1 8,45" fill="none" stroke="#c084fc" strokeWidth="1.5" strokeLinecap="round" className="animate-ping" style={{ animationDuration: '2s' }} />
+      <path d="M92,55 A22,22 0 0,0 92,45" fill="none" stroke="#c084fc" strokeWidth="1.5" strokeLinecap="round" className="animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+    </svg>
+  );
+}
+
+
