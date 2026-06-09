@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Volume2 } from 'lucide-react';
-import { playNote } from '../../utils/audio';
+import { playNote } from '../../../utils/audio';
 
 interface KeyboardKey {
   note: string;
@@ -30,12 +30,12 @@ const blackKeys: KeyboardKey[] = [
   { note: 'A#4', label: 'A#', swara: 'Ni₂', swaraFull: 'Kaisiki Nishadam', isBlack: true, leftIndex: 5 }
 ];
 
-interface Level0Props {
+interface Stage1Level0Props {
   onBack: () => void;
   onNext: () => void;
 }
 
-export default function Level0({ onBack, onNext }: Level0Props) {
+export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [lastPlayedKey, setLastPlayedKey] = useState<KeyboardKey | null>(null);
 
@@ -61,7 +61,7 @@ export default function Level0({ onBack, onNext }: Level0Props) {
       <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-primary-600 filter blur-3xl opacity-10 animate-pulse-slow"></div>
       <div className="absolute top-2/3 right-1/4 w-96 h-96 rounded-full bg-accent-rose filter blur-3xl opacity-10 animate-pulse-slow"></div>
 
-      {/* Level 0 Header */}
+      {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
         <button 
           onClick={onBack}
@@ -92,7 +92,7 @@ export default function Level0({ onBack, onNext }: Level0Props) {
         </div>
       </header>
 
-      {/* Level 0 Main Space */}
+      {/* Main Space */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 md:py-16 flex flex-col items-center justify-center relative z-10 space-y-8 md:space-y-12">
         
         {/* Header Info */}
@@ -205,7 +205,7 @@ export default function Level0({ onBack, onNext }: Level0Props) {
 
       </main>
 
-      {/* Level 0 Footer */}
+      {/* Footer */}
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
         <p>© 2026 SvaraSadhana • Stage 1 Sandbox</p>
       </footer>

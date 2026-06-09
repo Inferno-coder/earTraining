@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Play } from 'lucide-react';
 import { playNote } from '../../utils/audio';
+import type { QuizConfig } from './configs/types';
 
 interface KeyboardKey {
   note: string;
@@ -30,42 +31,43 @@ const blackKeys: KeyboardKey[] = [
   { note: 'A#4', label: 'A#', swara: 'Ni₂', swaraFull: 'Kaisiki Nishadam', isBlack: true, leftIndex: 5 }
 ];
 
-interface Level1Props {
+interface QuizEngineProps {
+  config: QuizConfig;
   onBack: () => void;
+  onNext?: () => void;
 }
 
-export default function Level1({ onBack }: Level1Props) {
+export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) {
   // Sound states
   const [activeNote, setActiveNote] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   
   // Game states
-  const [targetNote, setTargetNote] = useState<string | null>(null);
-  const [selectedGuess, setSelectedGuess] = useState<'Sa' | 'Pa' | null>(null);
-  const [feedback, setFeedback] = useState<{ status: 'correct' | 'incorrect' | 'idle'; message: string }>({ status: 'idle', message: '' });
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [targetNote, setTargetNote] = useState<any | null>(null);
+  const [selectedGuess, setSelectedGuess] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ status: 'correct' | 'incorrect' | 'idle'; message: string }>({ 
+    status: 'idle', 
+    message: '' 
+  });
   const [score, setScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
-  const [quizDeck, setQuizDeck] = useState<string[]>([]);
+  const [quizDeck, setQuizDeck] = useState<any[]>([]);
 
-  // Generate a deck containing exactly 5 Sa and 5 Pa notes, shuffled
-  const generateShuffledDeck = () => {
-    const deck = ['C4', 'C4', 'C4', 'C4', 'C4', 'G4', 'G4', 'G4', 'G4', 'G4'];
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-    return deck;
-  };
-
-  // Initialize deck on mount
+  // Initialize deck on mount or when configuration config changes
   useEffect(() => {
-    setQuizDeck(generateShuffledDeck());
-  }, []);
+    resetQuiz();
+    if (config.tutorialPopup) {
+      setShowTutorial(true);
+    } else {
+      setShowTutorial(false);
+    }
+  }, [config]);
 
-  // Play a keyboard reference note (only Sa or Pa are enabled)
+  // Play a keyboard reference note
   const handlePlayKey = async (key: KeyboardKey) => {
-    // Only C4 (Sa) and G4 (Pa) are enabled
-    const isEnabled = key.note === 'C4' || key.note === 'G4';
-    if (!isEnabled) return;
+    const isEnabled = config.referenceNotes.includes(key.note);
+    if (!isEnabled || isPlaying) return;
 
     setActiveNote(key.note);
     try {
@@ -78,65 +80,60 @@ export default function Level1({ onBack }: Level1Props) {
     }, 400);
   };
 
-  // Play a random mystery note (either Sa or Pa)
+  // Play a random mystery note / pair from deck
   const playRandomMysteryNote = async () => {
+    if (isPlaying) return;
+    setIsPlaying(true);
     setSelectedGuess(null);
     setFeedback({ status: 'idle', message: '' });
     
-    // Pull the note from the pre-shuffled deck based on current attempts
     let currentDeck = quizDeck;
     if (currentDeck.length === 0) {
-      currentDeck = generateShuffledDeck();
+      currentDeck = config.generateDeck();
       setQuizDeck(currentDeck);
     }
 
     const chosen = currentDeck[attempts % 10];
     setTargetNote(chosen);
 
-    // Play the chosen note
     try {
-      await playNote(chosen, '0.7s');
+      await config.playTarget(chosen);
     } catch (err) {
       console.error('Audio playback failed:', err);
+    } finally {
+      setIsPlaying(false);
     }
   };
 
-  // Replay the current target note
+  // Replay current note
   const replayMysteryNote = async () => {
-    if (!targetNote) return;
+    if (isPlaying || !targetNote) return;
+    setIsPlaying(true);
     try {
-      await playNote(targetNote, '0.7s');
+      await config.playTarget(targetNote);
     } catch (err) {
       console.error('Audio playback failed:', err);
+    } finally {
+      setIsPlaying(false);
     }
   };
 
   // Handle choice selection
-  const handleSelectChoice = (guess: 'Sa' | 'Pa') => {
-    if (!targetNote || feedback.status !== 'idle') return;
+  const handleSelectChoice = (guess: string) => {
+    if (!targetNote || feedback.status !== 'idle' || isPlaying) return;
     
     setSelectedGuess(guess);
     setAttempts(prev => prev + 1);
 
-    const correctSwara = targetNote === 'C4' ? 'Sa' : 'Pa';
-    const isCorrect = guess === correctSwara;
+    const { isCorrect, message } = config.checkAnswer(targetNote, guess);
 
     if (isCorrect) {
       setScore(prev => prev + 1);
-      setFeedback({
-        status: 'correct',
-        message: `Correct! The mystery note was indeed "${correctSwara}" (${correctSwara === 'Sa' ? 'Shadjam / C4' : 'Panchamam / G4'}).`
-      });
-      // Play a short success chime
-      setTimeout(() => {
-        playNote(targetNote, '0.2s');
-      }, 300);
-    } else {
-      setFeedback({
-        status: 'incorrect',
-        message: `Incorrect. Try listening to the mystery note again, then adjust your guess.`
-      });
     }
+    setFeedback({
+      status: isCorrect ? 'correct' : 'incorrect',
+      message
+    });
   };
 
   const resetQuiz = () => {
@@ -145,8 +142,14 @@ export default function Level1({ onBack }: Level1Props) {
     setTargetNote(null);
     setSelectedGuess(null);
     setFeedback({ status: 'idle', message: '' });
-    setQuizDeck(generateShuffledDeck());
+    setQuizDeck(config.generateDeck());
   };
+
+  // Determine standard grid column class
+  const gridColClass = 
+    config.choicesGridCols === 2 ? 'grid-cols-2' :
+    config.choicesGridCols === 3 ? 'grid-cols-3' :
+    config.choicesGridCols === 4 ? 'grid-cols-4' : 'grid-cols-5';
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative overflow-x-hidden selection:bg-primary-500 selection:text-white">
@@ -162,18 +165,29 @@ export default function Level1({ onBack }: Level1Props) {
           className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back to Home
+          Back
         </button>
         
         <div className="flex items-center gap-2">
-          <span className="text-sm font-mono text-gray-400">STAGE 1</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-amber"></span>
-          <span className="text-sm font-bold text-white tracking-wide">Level 1: Sa - Pa Ear Training</span>
+          <span className="text-sm font-mono text-gray-400">STAGE {config.stage}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></span>
+          <span className="text-sm font-bold text-white tracking-wide">Level {config.level}: {config.title}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-          <Volume2 className="w-3.5 h-3.5 text-primary-400" />
-          Enabled Notes: Sa, Pa
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+            <Volume2 className="w-3.5 h-3.5 text-primary-400" />
+            Enabled Notes: {config.enabledNotesLabel}
+          </div>
+          {onNext && (
+            <button 
+              onClick={onNext}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
+            >
+              Next Level
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -182,10 +196,10 @@ export default function Level1({ onBack }: Level1Props) {
         
         {/* Header Title */}
         <div className="text-center max-w-2xl mx-auto space-y-2">
-          <span className="text-xs font-mono text-accent-amber uppercase tracking-widest font-bold block">First Training Level</span>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">Identify Shadjam & Panchamam</h2>
+          <span className="text-xs font-mono text-primary-400 uppercase tracking-widest font-bold block">Training Session</span>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">{config.title}</h2>
           <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
-            Listen to a randomized mystery note in the background, and classify it. Only **Sa** (fundamental) and **Pa** (perfect fifth) are active.
+            {config.subtitle}
           </p>
         </div>
 
@@ -196,7 +210,7 @@ export default function Level1({ onBack }: Level1Props) {
           <div className="lg:col-span-7 flex flex-col justify-center space-y-6">
             <div className="flex justify-between items-center text-xs font-mono text-gray-400 px-2">
               <span>🎹 Reference Keyboard</span>
-              <span className="text-accent-amber">Only C4 (Sa) & G4 (Pa) are interactive</span>
+              <span className="text-primary-400">Interactive notes: {config.enabledNotesLabel}</span>
             </div>
 
             <div className="relative select-none w-full bg-slate-950 p-4 border border-white/10 rounded-3xl shadow-2xl flex aspect-[16/7] md:aspect-[16/6]">
@@ -204,12 +218,12 @@ export default function Level1({ onBack }: Level1Props) {
               {/* White Keys */}
               <div className="w-full h-full flex relative z-10 gap-1 md:gap-1.5">
                 {whiteKeys.map((key) => {
-                  const isEnabled = key.note === 'C4' || key.note === 'G4';
+                  const isEnabled = config.referenceNotes.includes(key.note);
                   const isPressed = activeNote === key.note;
                   return (
                     <button
                       key={key.note}
-                      disabled={!isEnabled}
+                      disabled={!isEnabled || isPlaying}
                       onClick={() => handlePlayKey(key)}
                       className={`flex-1 h-full rounded-b-2xl flex flex-col justify-end items-center pb-4 md:pb-6 transition-all duration-100 shadow-md ${
                         isEnabled
@@ -236,15 +250,24 @@ export default function Level1({ onBack }: Level1Props) {
                 })}
               </div>
 
-              {/* Black Keys (All disabled on Level 1) */}
+              {/* Black Keys (Disabled in current quiz engine configs) */}
               {blackKeys.map((key) => {
+                const isEnabled = config.referenceNotes.includes(key.note);
+                const isPressed = activeNote === key.note;
                 const leftOffset = `calc(12.5% * (${key.leftIndex!} + 1) - 4.2%)`;
                 return (
                   <button
                     key={key.note}
-                    disabled={true}
+                    disabled={!isEnabled || isPlaying}
+                    onClick={() => handlePlayKey(key)}
                     style={{ left: leftOffset, width: '8.4%' }}
-                    className="absolute h-[62%] rounded-b-xl flex flex-col justify-end items-center pb-3 border-b-4 border-black border-x border-slate-950/40 bg-slate-900/10 opacity-20 cursor-not-allowed text-gray-600 z-30"
+                    className={`absolute h-[62%] rounded-b-xl flex flex-col justify-end items-center pb-3 border-b-4 border-black border-x border-slate-950/40 transition-all z-30 ${
+                      isEnabled
+                        ? isPressed
+                          ? 'bg-primary-900 border-t-4 border-primary-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-850 cursor-pointer'
+                        : 'bg-slate-900/10 opacity-20 cursor-not-allowed text-gray-600'
+                    }`}
                   >
                     <div className="text-center select-none pointer-events-none">
                       <span className="block text-sm md:text-base font-extrabold font-serif leading-none">
@@ -276,10 +299,11 @@ export default function Level1({ onBack }: Level1Props) {
             <div className="space-y-4">
               {!targetNote ? (
                 <div className="text-center py-6 space-y-3">
-                  <p className="text-sm text-gray-400">Click the button to play a random note (Sa or Pa).</p>
+                  <p className="text-sm text-gray-400">Click the button to hear the mystery audio.</p>
                   <button
+                    disabled={isPlaying}
                     onClick={playRandomMysteryNote}
-                    className="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-primary-600/30 transition-all scale-100 hover:scale-[1.02] cursor-pointer"
+                    className="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white flex items-center justify-center gap-2 shadow-lg shadow-primary-600/30 transition-all scale-100 hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Play className="w-5 h-5 fill-current" />
                     Play Mystery Note
@@ -288,23 +312,31 @@ export default function Level1({ onBack }: Level1Props) {
               ) : (
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-950/80 border border-white/10 rounded-2xl text-center space-y-2">
-                    <span className="inline-block w-3 h-3 rounded-full bg-accent-amber animate-pulse"></span>
+                    <span className="inline-block w-3 h-3 rounded-full bg-primary-400 animate-pulse"></span>
                     <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">Mystery Note Active</p>
                     <button
+                      disabled={isPlaying}
                       onClick={replayMysteryNote}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-400 hover:text-primary-300 transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-400 hover:text-primary-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <RefreshCw className="w-3.5 h-3.5" /> Replay Sound
                     </button>
                   </div>
 
+                  {/* Optional Custom Illustration */}
+                  {config.customIllustration && (
+                    <div className="my-2">
+                      {config.customIllustration}
+                    </div>
+                  )}
+
                   {/* Guessing Choices */}
                   <div className="space-y-3">
                     <span className="text-xs font-mono text-gray-400 uppercase tracking-widest block text-left">Which note did you hear?</span>
-                    <div className="grid grid-cols-2 gap-4">
-                      {['Sa', 'Pa'].map((swaraName) => {
-                        const isSelected = selectedGuess === swaraName;
-                        const isCorrectAnswer = (targetNote === 'C4' && swaraName === 'Sa') || (targetNote === 'G4' && swaraName === 'Pa');
+                    <div className={`grid ${gridColClass} gap-3`}>
+                      {config.choices.map((choiceName) => {
+                        const isSelected = selectedGuess === choiceName;
+                        const isCorrectAnswer = config.checkAnswer(targetNote, choiceName).isCorrect;
                         const showResult = feedback.status !== 'idle';
                         
                         let btnStyle = "bg-slate-900 border-white/10 text-white hover:border-primary-500 hover:bg-slate-900/80";
@@ -321,12 +353,12 @@ export default function Level1({ onBack }: Level1Props) {
 
                         return (
                           <button
-                            key={swaraName}
-                            disabled={feedback.status !== 'idle'}
-                            onClick={() => handleSelectChoice(swaraName as 'Sa' | 'Pa')}
-                            className={`py-6 rounded-2xl font-serif text-2xl font-extrabold border transition-all text-center cursor-pointer ${btnStyle}`}
+                            key={choiceName}
+                            disabled={feedback.status !== 'idle' || isPlaying}
+                            onClick={() => handleSelectChoice(choiceName)}
+                            className={`py-4 rounded-xl font-serif text-lg font-extrabold border transition-all text-center cursor-pointer disabled:cursor-not-allowed ${btnStyle}`}
                           >
-                            {swaraName}
+                            {choiceName}
                           </button>
                         );
                       })}
@@ -354,7 +386,7 @@ export default function Level1({ onBack }: Level1Props) {
 
                   {attempts >= 10 ? (
                     <div className="p-4 bg-primary-950/40 border border-primary-500/30 rounded-xl space-y-3">
-                      <p className="text-sm font-bold text-white text-center">🏁 Level 1 Complete!</p>
+                      <p className="text-sm font-bold text-white text-center">🏁 Level {config.level} Complete!</p>
                       <p className="text-xs text-gray-300 text-center">
                         You scored <strong className="text-white text-sm">{score}</strong> out of 10 rounds.
                       </p>
@@ -367,8 +399,9 @@ export default function Level1({ onBack }: Level1Props) {
                     </div>
                   ) : (
                     <button
+                      disabled={isPlaying}
                       onClick={playRandomMysteryNote}
-                      className="w-full py-3 rounded-xl font-bold bg-white/10 hover:bg-white/15 border border-white/10 text-white flex items-center justify-center gap-1.5 transition-all text-sm cursor-pointer"
+                      className="w-full py-3 rounded-xl font-bold bg-white/10 hover:bg-white/15 border border-white/10 text-white flex items-center justify-center gap-1.5 transition-all text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next Note <ArrowRight className="w-4 h-4" />
                     </button>
@@ -385,9 +418,12 @@ export default function Level1({ onBack }: Level1Props) {
 
       {/* Footer */}
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
-        <p>© 2026 SvaraSadhana • Stage 1 Sandbox</p>
+        <p>© 2026 SvaraSadhana • Stage {config.stage} Training</p>
       </footer>
 
+      {showTutorial && config.tutorialPopup && (
+        config.tutorialPopup(() => setShowTutorial(false))
+      )}
     </div>
   );
 }
