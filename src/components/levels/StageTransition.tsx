@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
-import { Play, Sparkles, Award } from 'lucide-react';
+import { Play, Sparkles, Award, Home } from 'lucide-react';
 import { playNote } from '../../utils/audio';
 
 interface StageTransitionProps {
   stage: 1 | 2 | 3 | 4 | 5;
   onBegin: () => void;
+  onHome: () => void;
 }
 
-export default function StageTransition({ stage, onBegin }: StageTransitionProps) {
+export default function StageTransition({ stage, onBegin, onHome }: StageTransitionProps) {
   // Play transition melody on mount
   useEffect(() => {
     const playIntroMelody = async () => {
@@ -155,6 +156,15 @@ export default function StageTransition({ stage, onBegin }: StageTransitionProps
 
       {/* Main Card */}
       <div className="relative max-w-2xl w-full glass rounded-3xl p-6 md:p-10 border-white/5 shadow-2xl flex flex-col items-center text-center space-y-6 md:space-y-8 animate-scale-up max-h-[90vh] overflow-y-auto">
+
+        {/* Absolute positioned Home Button */}
+        <button 
+          onClick={onHome}
+          className="absolute top-6 left-6 flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer group"
+        >
+          <Home className="w-3.5 h-3.5" />
+          Home
+        </button>
 
         {/* Celebration / Icon Badge */}
         <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-mono font-bold tracking-widest ${stageData.badgeBg} animate-bounce`}>

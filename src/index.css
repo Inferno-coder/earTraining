@@ -125,3 +125,81 @@ body {
 .animate-scale-up {
   animation: scaleUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
+
+/* Premium Button Animations & Enhancements */
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.btn-shimmer {
+  background-image: linear-gradient(
+    135deg,
+    #6d28d9 0%,
+    #8b5cf6 35%,
+    #ec4899 65%,
+    #8b5cf6 85%,
+    #6d28d9 100%
+  );
+  background-size: 200% 100%;
+  animation: gradient-flow 35s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+.btn-shimmer:hover {
+  background-image: linear-gradient(
+    135deg,
+    #7c3aed 0%,
+    #a78bfa 35%,
+    #f472b6 65%,
+    #a78bfa 85%,
+    #7c3aed 100%
+  );
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4), 0 0 10px rgba(245, 158, 11, 0.15);
+}
+
+.btn-practice-gradient {
+  background-image: linear-gradient(
+    135deg,
+    #312e81 0%,
+    #4f46e5 35%,
+    #0891b2 65%,
+    #4f46e5 85%,
+    #312e81 100%
+  );
+  background-size: 200% 100%;
+  animation: gradient-flow 35s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+.btn-practice-gradient:hover {
+  background-image: linear-gradient(
+    135deg,
+    #3730a3 0%,
+    #6366f1 35%,
+    #06b6d4 65%,
+    #6366f1 85%,
+    #3730a3 100%
+  );
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.45), 0 0 10px rgba(6, 182, 212, 0.25);
+}
+
+@keyframes glow-breath {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(139, 92, 246, 0.7), 0 0 8px rgba(245, 158, 11, 0.2);
+  }
+}
+
+.btn-glow {
+  animation: glow-breath 6s infinite ease-in-out;
+}

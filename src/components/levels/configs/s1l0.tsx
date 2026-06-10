@@ -295,7 +295,7 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
               </h4>
               <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
                 {tourStep === 1 && "Welcome to SvaraSadhana! Start by clicking any white or black key on the keyboard. Hear the synthesized note and see how Western notes match their Carnatic Swaras."}
-                {tourStep === 2 && "Click 'Back to Home' at the top-left anytime you want to exit this lesson, review other stages, or check your profile progress."}
+                {tourStep === 2 && "Click 'Back to Home' at the top-left to exit this lesson. From the home page, you can access the Custom Practice Room to build your own scales, choose playback speeds, and loop note sequences."}
                 {tourStep === 3 && "Once you have practiced and calibrated your ears, click 'Go to Level 1' in the top-right to start your first pitch discrimination quiz!"}
               </p>
             </div>

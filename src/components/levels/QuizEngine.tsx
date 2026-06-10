@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Play } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Play, Home } from 'lucide-react';
 import { playNote } from '../../utils/audio';
 import type { QuizConfig } from './configs/types';
 
@@ -51,9 +51,10 @@ interface QuizEngineProps {
   config: QuizConfig;
   onBack: () => void;
   onNext?: () => void;
+  onHome: () => void;
 }
 
-export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) {
+export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngineProps) {
   // Sound states
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -176,13 +177,23 @@ export default function QuizEngine({ config, onBack, onNext }: QuizEngineProps) 
 
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
-        >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back
-        </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            Back
+          </button>
+          <span className="text-white/20">|</span>
+          <button 
+            onClick={onHome}
+            className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
+          >
+            <Home className="w-3.5 h-3.5" />
+            Home
+          </button>
+        </div>
         
         <div className="flex items-center gap-2">
           <span className="text-sm font-mono text-gray-400">STAGE {config.stage}</span>

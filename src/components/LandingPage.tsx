@@ -11,6 +11,8 @@ import {
   Award,
   Sparkles
 } from 'lucide-react';
+import CustomPracticeModal from './CustomPracticeModal';
+
 
 type RagaName = 'Mayamalavagowla' | 'Shankarabharanam' | 'Kharaharapriya' | 'Kalyani';
 
@@ -86,6 +88,7 @@ interface LandingPageProps {
 export default function LandingPage({ onLaunch }: LandingPageProps) {
   const [selectedRaga, setSelectedRaga] = useState<RagaName>('Mayamalavagowla');
   const [showCurriculumModal, setShowCurriculumModal] = useState(false);
+  const [showCustomPracticeModal, setShowCustomPracticeModal] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
 
   return (
@@ -120,12 +123,19 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <BookOpen className="w-4 h-4 text-primary-400" />
             Curriculum
           </button>
+          <button 
+            onClick={() => setShowCustomPracticeModal(true)}
+            className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
+          >
+            <Sliders className="w-4 h-4 text-indigo-400" />
+            Custom Practice
+          </button>
         </nav>
 
         <div>
           <button 
             onClick={onLaunch}
-            className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 border border-white/10 text-white transition-all shadow-md shadow-black/20 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-white transition-all shadow-md shadow-primary-600/20 hover:scale-[1.03] cursor-pointer btn-shimmer"
           >
             Launch Academy
           </button>
@@ -158,10 +168,18 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <div className="flex flex-wrap gap-4 pt-2">
               <button
                 onClick={onLaunch}
-                className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold bg-primary-600 hover:bg-primary-500 text-white shadow-lg shadow-primary-600/30 transition-all scale-100 hover:scale-[1.02] cursor-pointer"
+                className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-extrabold text-white shadow-lg transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-shimmer btn-glow group"
               >
                 Launch Learning Sandbox
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+              </button>
+
+              <button
+                onClick={() => setShowCustomPracticeModal(true)}
+                className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold border border-white/10 text-white shadow-lg transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-practice-gradient group"
+              >
+                <Sliders className="w-4 h-4 group-hover:rotate-45 transition-transform" />
+                Custom Practice Room
               </button>
               
               <button
@@ -459,12 +477,13 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <p className="text-gray-300 text-sm md:text-base leading-relaxed">
               Start building your swara recognition today. Perfect for classical students, amateur singers, and seasoned musicians aiming for absolute pitch perfection.
             </p>
-            <div className="pt-4">
+            <div className="pt-4 flex justify-center">
               <button 
                 onClick={onLaunch}
-                className="px-8 py-4 rounded-xl font-bold bg-primary-600 hover:bg-primary-500 text-white shadow-xl shadow-primary-700/20 transition-all scale-100 hover:scale-[1.02] cursor-pointer"
+                className="flex items-center gap-2 mx-auto px-8 py-4 rounded-xl font-extrabold text-white shadow-xl transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-shimmer btn-glow group"
               >
                 Launch Learning Sandbox
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
               </button>
             </div>
           </div>
@@ -680,6 +699,12 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           </div>
         </div>
       )}
+
+      {/* Custom Practice Modal */}
+      <CustomPracticeModal 
+        isOpen={showCustomPracticeModal}
+        onClose={() => setShowCustomPracticeModal(false)}
+      />
 
     </div>
   );

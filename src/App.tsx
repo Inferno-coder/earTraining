@@ -37,7 +37,7 @@ function App() {
         <LandingPage onLaunch={() => setView('t1')} />
       )}
       {view === 't1' && (
-        <StageTransition stage={1} onBegin={() => setView('s1l0')} />
+        <StageTransition stage={1} onBegin={() => setView('s1l0')} onHome={() => setView('landing')} />
       )}
       {view === 's1l0' && (
         <Stage1Level0 onBack={() => setView('landing')} onNext={() => setView('s1l1')} />
@@ -47,6 +47,7 @@ function App() {
           config={s1l1Config}
           onBack={() => setView('s1l0')}
           onNext={() => setView('s1l2')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's1l2' && (
@@ -54,16 +55,18 @@ function App() {
           config={s1l2Config}
           onBack={() => setView('s1l1')}
           onNext={() => setView('t2')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 't2' && (
-        <StageTransition stage={2} onBegin={() => setView('s2l1')} />
+        <StageTransition stage={2} onBegin={() => setView('s2l1')} onHome={() => setView('landing')} />
       )}
       {view === 's2l1' && (
         <QuizEngine
           config={s2l1Config}
           onBack={() => setView('s1l2')}
           onNext={() => setView('s2l2')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's2l2' && (
@@ -71,6 +74,7 @@ function App() {
           config={s2l2Config}
           onBack={() => setView('s2l1')}
           onNext={() => setView('s2l3')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's2l3' && (
@@ -78,6 +82,7 @@ function App() {
           config={s2l3Config}
           onBack={() => setView('s2l2')}
           onNext={() => setView('s2l4')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's2l4' && (
@@ -85,6 +90,7 @@ function App() {
           config={s2l4Config}
           onBack={() => setView('s2l3')}
           onNext={() => setView('s2l5')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's2l5' && (
@@ -92,16 +98,18 @@ function App() {
           config={s2l5Config}
           onBack={() => setView('s2l4')}
           onNext={() => setView('t3')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 't3' && (
-        <StageTransition stage={3} onBegin={() => setView('s3l1')} />
+        <StageTransition stage={3} onBegin={() => setView('s3l1')} onHome={() => setView('landing')} />
       )}
       {view === 's3l1' && (
         <QuizEngine
           config={s3l1Config}
           onBack={() => setView('s2l5')}
           onNext={() => setView('s3l2')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's3l2' && (
@@ -109,6 +117,7 @@ function App() {
           config={s3l2Config}
           onBack={() => setView('s3l1')}
           onNext={() => setView('s3l3')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's3l3' && (
@@ -116,26 +125,29 @@ function App() {
           config={s3l3Config}
           onBack={() => setView('s3l2')}
           onNext={() => setView('t4')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 't4' && (
-        <StageTransition stage={4} onBegin={() => setView('s4l1')} />
+        <StageTransition stage={4} onBegin={() => setView('s4l1')} onHome={() => setView('landing')} />
       )}
       {view === 's4l1' && (
         <ReconstructionEngine
           config={s4l1Config}
           onBack={() => setView('s3l3')}
           onNext={() => setView('t5')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 't5' && (
-        <StageTransition stage={5} onBegin={() => setView('s5l1')} />
+        <StageTransition stage={5} onBegin={() => setView('s5l1')} onHome={() => setView('landing')} />
       )}
       {view === 's5l1' && (
         <QuizEngine
           config={s5l1Config}
           onBack={() => setView('s4l1')}
           onNext={() => setView('s5l2')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l2' && (
@@ -143,6 +155,7 @@ function App() {
           config={s5l2Config}
           onBack={() => setView('s5l1')}
           onNext={() => setView('s5l3')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l3' && (
@@ -150,6 +163,7 @@ function App() {
           config={s5l3Config}
           onBack={() => setView('s5l2')}
           onNext={() => setView('s5l4')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l4' && (
@@ -157,6 +171,7 @@ function App() {
           config={s5l4Config}
           onBack={() => setView('s5l3')}
           onNext={() => setView('s5l5')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l5' && (
@@ -164,6 +179,7 @@ function App() {
           config={s5l5Config}
           onBack={() => setView('s5l4')}
           onNext={() => setView('s5l6')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l6' && (
@@ -171,6 +187,7 @@ function App() {
           config={s5l6Config}
           onBack={() => setView('s5l5')}
           onNext={() => setView('s5l7')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l7' && (
@@ -178,12 +195,14 @@ function App() {
           config={s5l7Config}
           onBack={() => setView('s5l6')}
           onNext={() => setView('s5l8')}
+          onHome={() => setView('landing')}
         />
       )}
       {view === 's5l8' && (
         <ReconstructionEngine
           config={s5l8Config}
           onBack={() => setView('s5l7')}
+          onHome={() => setView('landing')}
         />
       )}
     </>
