@@ -32,6 +32,19 @@ CREATE TABLE IF NOT EXISTS public.practice_attempts (
     response_time_ms INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS public.user_progress (
+    user_id UUID PRIMARY KEY REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    current_stage INTEGER NOT NULL DEFAULT 1,
+    current_level INTEGER NOT NULL DEFAULT 1,
+    highest_unlocked_stage INTEGER NOT NULL DEFAULT 1,
+    highest_unlocked_level INTEGER NOT NULL DEFAULT 1,
+    total_xp INTEGER NOT NULL DEFAULT 0,
+    total_questions INTEGER NOT NULL DEFAULT 0,
+    total_correct INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 /**

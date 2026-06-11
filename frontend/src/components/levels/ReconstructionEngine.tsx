@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, VolumeX, Home } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, VolumeX, Home, ChevronRight, Lock } from 'lucide-react';
 import { playNote, startTanpura, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
@@ -50,11 +50,20 @@ interface ReconstructionEngineProps {
 
 export default function ReconstructionEngine({ config, onBack, onNext, onHome }: ReconstructionEngineProps) {
   // Auth & API states
-  const { session } = useAuth();
+  const { session, updateProgress, progress } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
   const [sessionFinished, setSessionFinished] = useState<boolean>(false);
+  const [completionResponse, setCompletionResponse] = useState<{ pass: boolean; xpGained?: number } | null>(null);
+
+  const isNextLevelUnlocked = (): boolean => {
+    if (!progress) return false;
+    const { highest_unlocked_stage, highest_unlocked_level } = progress;
+    if (highest_unlocked_stage > config.stage) return true;
+    if (highest_unlocked_stage === config.stage && highest_unlocked_level > config.level) return true;
+    return false;
+  };
 
   const [sequenceLength, setSequenceLength] = useState<number>(config.defaultLength);
   const [targetSequence, setTargetSequence] = useState<string[]>([]);
@@ -62,11 +71,11 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackActiveIndex, setPlaybackActiveIndex] = useState<number | null>(null);
   const [speed, setSpeed] = useState<'slow' | 'medium' | 'fast'>('medium');
-  
+
   const [tanpuraActive, setTanpuraActive] = useState<boolean>(false);
   const [roundStatus, setRoundStatus] = useState<'idle' | 'playing' | 'entering' | 'correct' | 'incorrect'>('idle');
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
-  
+
   const [score, setScore] = useState<number>(0);
   const [attempts, setAttempts] = useState<number>(0);
 
@@ -87,8 +96,11 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       const durationMs = Date.now() - sessionStartTime;
       try {
         setSessionFinished(true);
-        await finishPracticeSession(session.access_token, sessionId, durationMs);
+        const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
         console.log('[ReconstructionEngine] Practice session finished successfully');
+        if (res && res.progress) {
+          updateProgress(res.progress);
+        }
       } catch (err) {
         console.error('[ReconstructionEngine] Failed to finish reconstruction session:', err);
       }
@@ -263,8 +275,16 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
         const durationMs = sessionStartTime ? now - sessionStartTime : 0;
         try {
           setSessionFinished(true);
-          await finishPracticeSession(session.access_token, sessionId, durationMs);
+          const finalScore = isCorrect ? score + 1 : score;
+          const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
           console.log('[ReconstructionEngine] Practice session finished successfully');
+          if (res && res.progress) {
+            updateProgress(res.progress);
+          }
+          setCompletionResponse({
+            pass: res.pass,
+            xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
+          });
         } catch (err) {
           console.error('[ReconstructionEngine] Failed to finish practice session:', err);
         }
@@ -300,9 +320,9 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
   }
 
   // Row columns for swara keypad grid
-  const keypadColClass = 
-    config.swaraButtons.length <= 8 
-      ? 'grid-cols-4 md:grid-cols-8' 
+  const keypadColClass =
+    config.swaraButtons.length <= 8
+      ? 'grid-cols-4 md:grid-cols-8'
       : 'grid-cols-4 md:grid-cols-7 lg:grid-cols-13';
 
   return (
@@ -314,7 +334,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
@@ -322,7 +342,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
             Back
           </button>
           <span className="text-white/20">|</span>
-          <button 
+          <button
             onClick={handleHome}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
@@ -330,7 +350,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
             Home
           </button>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-sm font-mono text-gray-400">STAGE {config.stage}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-accent-rose animate-pulse"></span>
@@ -343,12 +363,25 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
             Active: {config.enabledNotesLabel}
           </div>
           {onNext && (
-            <button 
+            <button
+              disabled={!isNextLevelUnlocked()}
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md ${isNextLevelUnlocked()
+                ? 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/20 active:scale-95 text-xs md:text-sm font-bold'
+                : 'bg-slate-950/40 border border-white/5 text-gray-500 cursor-not-allowed shadow-none font-mono tracking-wider uppercase text-[10px] md:text-xs'
+                }`}
             >
-              Next Level
-              <ArrowRight className="w-3.5 h-3.5" />
+              {isNextLevelUnlocked() ? (
+                <>
+                  <span className="inline-block">Next Level</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                  <span>Next Level</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -356,7 +389,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
       {/* Main Container */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 pt-3 pb-8 md:pt-6 md:pb-12 flex flex-col relative z-10 space-y-6 md:space-y-8">
-        
+
         {/* Title Block */}
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-mono text-accent-rose uppercase tracking-widest font-bold block">Interactive Dictation</span>
@@ -368,10 +401,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
         {/* Dashboard Panels */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          
+
           {/* Settings & Stats Panel (Left 4 columns) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
-            
+
             {/* Sequence Length Selector Card */}
             {lengths.length > 1 && (
               <div className="glass rounded-3xl p-5 border-white/5 space-y-4 flex flex-col justify-between">
@@ -388,11 +421,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                         key={len}
                         disabled={isPlaying}
                         onClick={() => setSequenceLength(len)}
-                        className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer ${
-                          isActive
-                            ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-md shadow-primary-700/30'
-                            : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
+                        className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer ${isActive
+                          ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-md shadow-primary-700/30'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
                       >
                         {len}
                       </button>
@@ -408,7 +440,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
             {/* Tanpura & Scoreboard Card */}
             <div className="glass rounded-3xl p-5 border-white/5 flex flex-col justify-between space-y-4">
-              
+
               {/* Tanpura Control */}
               <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
@@ -419,11 +451,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                 </div>
                 <button
                   onClick={handleToggleTanpura}
-                  className={`px-3 py-1.5 text-[10px] font-mono font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-1 ${
-                    tanpuraActive
-                      ? 'bg-accent-amber/20 border-accent-amber/40 text-accent-amber'
-                      : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1.5 text-[10px] font-mono font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-1 ${tanpuraActive
+                    ? 'bg-accent-amber/20 border-accent-amber/40 text-accent-amber'
+                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                    }`}
                 >
                   {tanpuraActive ? <Volume2 className="w-3.5 h-3.5 text-accent-amber animate-pulse" /> : <VolumeX className="w-3.5 h-3.5" />}
                   {tanpuraActive ? 'ON' : 'OFF'}
@@ -441,11 +472,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                         key={s}
                         disabled={isPlaying}
                         onClick={() => setSpeed(s)}
-                        className={`flex-1 py-1 text-[9px] font-mono font-bold rounded-lg uppercase tracking-wider transition-all cursor-pointer ${
-                          isActive
-                            ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-sm'
-                            : 'text-gray-400 hover:text-white'
-                        }`}
+                        className={`flex-1 py-1 text-[9px] font-mono font-bold rounded-lg uppercase tracking-wider transition-all cursor-pointer ${isActive
+                          ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-sm'
+                          : 'text-gray-400 hover:text-white'
+                          }`}
                       >
                         {s}
                       </button>
@@ -469,7 +499,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
           {/* Melody Board Panel (Right 8 columns) */}
           <div className="lg:col-span-8 glass rounded-3xl p-6 border-white/5 shadow-xl flex flex-col justify-between space-y-6">
-            
+
             {/* Player Visualizer & Slots */}
             <div className="p-5 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col items-center justify-center space-y-5 shadow-inner relative overflow-hidden">
               {/* Background glow when playing */}
@@ -481,11 +511,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
               <button
                 disabled={isPlaying}
                 onClick={handlePlaySequence}
-                className={`w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center gap-1 transition-all duration-300 cursor-pointer shadow-lg relative ${
-                  isPlaying
-                    ? 'bg-slate-900 border-white/5 text-gray-500 shadow-none cursor-not-allowed scale-95'
-                    : 'bg-gradient-to-tr from-primary-600/20 via-primary-700/10 to-accent-rose/20 hover:from-primary-600/35 hover:to-accent-rose/35 border-primary-500/30 text-white hover:border-primary-400/50 scale-100 hover:scale-105 shadow-primary-700/10'
-                }`}
+                className={`w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center gap-1 transition-all duration-300 cursor-pointer shadow-lg relative ${isPlaying
+                  ? 'bg-slate-900 border-white/5 text-gray-500 shadow-none cursor-not-allowed scale-95'
+                  : 'bg-gradient-to-tr from-primary-600/20 via-primary-700/10 to-accent-rose/20 hover:from-primary-600/35 hover:to-accent-rose/35 border-primary-500/30 text-white hover:border-primary-400/50 scale-100 hover:scale-105 shadow-primary-700/10'
+                  }`}
               >
                 {isPlaying ? (
                   <>
@@ -506,10 +535,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                   const isPlaybackActive = playbackActiveIndex === idx;
                   const swara = userSequence[idx];
                   const hasValue = !!swara;
-                  
+
                   let borderStyle = "border-white/10 bg-slate-950/40";
                   let textStyle = "text-gray-500";
-                  
+
                   if (isPlaybackActive) {
                     borderStyle = "border-primary-400 bg-primary-950/20 shadow-[0_0_12px_rgba(139,92,246,0.4)] animate-pulse";
                   } else if (roundStatus === 'correct') {
@@ -522,9 +551,9 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                     borderStyle = "border-amber-500 bg-amber-950/10 shadow-[0_0_8px_rgba(245,158,11,0.2)]";
                     textStyle = "text-accent-amber font-bold";
                   }
-                  
+
                   return (
-                    <div 
+                    <div
                       key={idx}
                       className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border flex items-center justify-center transition-all duration-200 text-base md:text-xl font-serif ${borderStyle} ${textStyle}`}
                     >
@@ -581,20 +610,64 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                   <p className="text-xs text-gray-300 text-center">
                     You scored <strong className="text-white text-sm">{score}</strong> out of {getReconstructionTotalQuestions(sequenceLength)} rounds ({Math.round((score / getReconstructionTotalQuestions(sequenceLength)) * 100)}%).
                   </p>
-                  <button
-                    onClick={() => {
-                      setScore(0);
-                      setAttempts(0);
-                      setSessionId(null);
-                      setSessionStartTime(null);
-                      setSessionFinished(false);
-                      startNewRound(sequenceLength);
-                      initSession();
-                    }}
-                    className="w-full py-2.5 rounded-xl font-bold bg-primary-600 hover:bg-primary-500 text-white flex items-center justify-center gap-1.5 transition-all text-sm cursor-pointer"
-                  >
-                    Start New Practice
-                  </button>
+
+                  {completionResponse && (
+                    <div className={`p-3 rounded-lg text-center text-xs font-semibold w-full ${completionResponse.pass
+                      ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                      : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                      }`}>
+                      {completionResponse.pass ? (
+                        <>
+                          <p className="font-bold text-sm">🎉 Level Passed!</p>
+                          <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
+                          <p className="text-[10px] text-green-300 mt-0.5">Next Level Unlocked!</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-bold text-sm">❌ Level Failed</p>
+                          <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
+                          <p className="text-[10px] text-red-300 mt-0.5">
+                            Scored {score} correct (requires {getReconstructionTotalQuestions(sequenceLength) >= 25 ? 20 : getReconstructionTotalQuestions(sequenceLength) >= 20 ? 16 : getReconstructionTotalQuestions(sequenceLength) >= 15 ? 12 : 8} to unlock next level)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 w-full">
+                    <button
+                      onClick={() => {
+                        setScore(0);
+                        setAttempts(0);
+                        setSessionId(null);
+                        setSessionStartTime(null);
+                        setSessionFinished(false);
+                        setCompletionResponse(null);
+                        startNewRound(sequenceLength);
+                        initSession();
+                      }}
+                      className="flex-1 py-2.5 rounded-xl font-bold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                    {completionResponse?.pass && onNext && (
+                      <button
+                        onClick={() => {
+                          setScore(0);
+                          setAttempts(0);
+                          setSessionId(null);
+                          setSessionStartTime(null);
+                          setSessionFinished(false);
+                          setCompletionResponse(null);
+                          onNext();
+                        }}
+                        className="flex-1 py-2.5 rounded-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-md shadow-primary-600/20"
+                      >
+                        Next Level
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2.5 justify-end min-h-[48px] w-full">

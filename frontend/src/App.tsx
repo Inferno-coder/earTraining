@@ -31,6 +31,39 @@ import ReconstructionEngine from './components/levels/ReconstructionEngine';
 
 type ViewState = 'landing' | 't1' | 's1l0' | 's1l1' | 's1l2' | 't2' | 's2l1' | 's2l2' | 's2l3' | 's2l4' | 's2l5' | 't3' | 's3l1' | 's3l2' | 's3l3' | 't4' | 's4l1' | 't5' | 's5l1' | 's5l2' | 's5l3' | 's5l4' | 's5l5' | 's5l6' | 's5l7';
 
+function getViewStateForProgress(stage: number, level: number): ViewState {
+  if (stage === 1) {
+    if (level === 2) return 's1l2';
+    // Stage 1 Level 1 (or 0/default) starts from Stage 1 Intro Transition
+    return 't1';
+  }
+  if (stage === 2) {
+    if (level === 1) return 's2l1';
+    if (level === 2) return 's2l2';
+    if (level === 3) return 's2l3';
+    if (level === 4) return 's2l4';
+    if (level === 5) return 's2l5';
+  }
+  if (stage === 3) {
+    if (level === 1) return 's3l1';
+    if (level === 2) return 's3l2';
+    if (level === 3) return 's3l3';
+  }
+  if (stage === 4) {
+    if (level === 1) return 's4l1';
+  }
+  if (stage === 5) {
+    if (level === 1) return 's5l1';
+    if (level === 2) return 's5l2';
+    if (level === 3) return 's5l3';
+    if (level === 4) return 's5l4';
+    if (level === 5) return 's5l5';
+    if (level === 6) return 's5l6';
+    if (level === 7) return 's5l7';
+  }
+  return 't1';
+}
+
 function App() {
   return (
     <Routes>
@@ -42,7 +75,7 @@ function App() {
 }
 
 function AppContent() {
-  const { session, loading } = useAuth();
+  const { session, loading, progress } = useAuth();
   const [view, setView] = useState<ViewState>('landing');
 
   if (loading && view !== 'landing') {
@@ -63,7 +96,13 @@ function AppContent() {
   return (
     <>
       {view === 'landing' && (
-        <LandingPage onLaunch={() => setView('t1')} />
+        <LandingPage onLaunch={() => {
+          if (progress) {
+            setView(getViewStateForProgress(progress.highest_unlocked_stage, progress.highest_unlocked_level));
+          } else {
+            setView('t1');
+          }
+        }} />
       )}
       {view === 't1' && (
         <StageTransition stage={1} onBegin={() => setView('s1l0')} onHome={() => setView('landing')} />

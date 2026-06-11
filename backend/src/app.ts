@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { authMiddleware } from './middleware/auth.middleware';
 import userRoutes from './routes/user.routes';
 import practiceRoutes from './routes/practice.routes';
+import progressRoutes from './routes/progress.routes';
 import { initializeDatabase } from './db/init';
 
 // Load environment variables
@@ -20,6 +21,9 @@ app.use(express.json());
 
 // Mount user routes
 app.use('/api/users', userRoutes);
+
+// Mount user progress routes
+app.use('/api/user', progressRoutes);
 
 // Mount practice history routes
 app.use('/api/practice', practiceRoutes);

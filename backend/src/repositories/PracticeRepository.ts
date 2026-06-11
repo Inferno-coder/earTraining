@@ -1,4 +1,5 @@
 import { pool } from '../config/db';
+import { PoolClient } from 'pg';
 import type { PracticeSession, PracticeAttempt } from '../types/practice';
 
 export class PracticeRepository {
@@ -75,7 +76,7 @@ export class PracticeRepository {
   /**
    * Calculates total attempts and correct ones for a specific session
    */
-  async countSessionAttempts(sessionId: string): Promise<{ total: number; correct: number }> {
+  async countSessionAttempts(sessionId: string, client?: PoolClient): Promise<{ total: number; correct: number }> {
     try {
       const query = `
         SELECT 
@@ -84,7 +85,8 @@ export class PracticeRepository {
         FROM practice_attempts
         WHERE session_id = $1
       `;
-      const { rows } = await pool.query(query, [sessionId]);
+      const conn = client || pool;
+      const { rows } = await conn.query(query, [sessionId]);
       return {
         total: rows[0].total || 0,
         correct: rows[0].correct || 0,
@@ -103,7 +105,8 @@ export class PracticeRepository {
     durationMs: number,
     total: number,
     correct: number,
-    accuracy: number
+    accuracy: number,
+    client?: PoolClient
   ): Promise<PracticeSession> {
     try {
       const query = `
@@ -117,7 +120,8 @@ export class PracticeRepository {
         RETURNING *
       `;
       const values = [id, completedAt, durationMs, total, correct, accuracy];
-      const { rows } = await pool.query(query, values);
+      const conn = client || pool;
+      const { rows } = await conn.query(query, values);
       return rows[0] as PracticeSession;
     } catch (error: any) {
       throw new Error(`DB Error [finishSession]: ${error.message}`);

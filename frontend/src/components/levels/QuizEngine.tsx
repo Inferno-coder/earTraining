@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Play, Home } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Play, Home, ChevronRight, Lock } from 'lucide-react';
 import { playNote } from '../../utils/audio';
 import type { QuizConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
@@ -58,23 +58,32 @@ interface QuizEngineProps {
 
 export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngineProps) {
   // Auth & API states
-  const { session } = useAuth();
+  const { session, updateProgress, progress } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
   const [sessionFinished, setSessionFinished] = useState<boolean>(false);
+  const [completionResponse, setCompletionResponse] = useState<{ pass: boolean; xpGained?: number } | null>(null);
 
   // Sound states
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+
+  const isNextLevelUnlocked = (): boolean => {
+    if (!progress) return false;
+    const { highest_unlocked_stage, highest_unlocked_level } = progress;
+    if (highest_unlocked_stage > config.stage) return true;
+    if (highest_unlocked_stage === config.stage && highest_unlocked_level > config.level) return true;
+    return false;
+  };
+
   // Game states
   const [showTutorial, setShowTutorial] = useState(false);
   const [targetNote, setTargetNote] = useState<any | null>(null);
   const [selectedGuess, setSelectedGuess] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ status: 'correct' | 'incorrect' | 'idle'; message: string }>({ 
-    status: 'idle', 
-    message: '' 
+  const [feedback, setFeedback] = useState<{ status: 'correct' | 'incorrect' | 'idle'; message: string }>({
+    status: 'idle',
+    message: ''
   });
   const [score, setScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
@@ -97,8 +106,11 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       const durationMs = Date.now() - sessionStartTime;
       try {
         setSessionFinished(true);
-        await finishPracticeSession(session.access_token, sessionId, durationMs);
+        const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
         console.log('[QuizEngine] Practice session finished successfully');
+        if (res && res.progress) {
+          updateProgress(res.progress);
+        }
       } catch (err) {
         console.error('[QuizEngine] Failed to finish practice session on navigation:', err);
       }
@@ -152,7 +164,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
     setIsPlaying(true);
     setSelectedGuess(null);
     setFeedback({ status: 'idle', message: '' });
-    
+
     let currentDeck = quizDeck;
     if (currentDeck.length === 0) {
       currentDeck = config.generateDeck();
@@ -189,7 +201,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
   // Handle choice selection
   const handleSelectChoice = async (guess: string) => {
     if (!targetNote || feedback.status !== 'idle' || isPlaying || !sessionId) return;
-    
+
     setSelectedGuess(guess);
     const newAttemptsCount = attempts + 1;
     setAttempts(newAttemptsCount);
@@ -229,8 +241,16 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       const durationMs = sessionStartTime ? now - sessionStartTime : 0;
       try {
         setSessionFinished(true);
-        await finishPracticeSession(session.access_token, sessionId, durationMs);
+        const finalScore = isCorrect ? score + 1 : score;
+        const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
         console.log('[QuizEngine] Practice session finished successfully');
+        if (res && res.progress) {
+          updateProgress(res.progress);
+        }
+        setCompletionResponse({
+          pass: res.pass,
+          xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
+        });
       } catch (err) {
         console.error('[QuizEngine] Failed to finish practice session:', err);
       }
@@ -248,18 +268,19 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
     setSessionStartTime(null);
     setAttemptStartTime(null);
     setSessionFinished(false);
+    setCompletionResponse(null);
     initSession();
   };
 
   // Determine standard grid column class
-  const gridColClass = 
+  const gridColClass =
     config.choicesGridCols === 2 ? 'grid-cols-2' :
-    config.choicesGridCols === 3 ? 'grid-cols-3' :
-    config.choicesGridCols === 4 ? 'grid-cols-4' : 'grid-cols-5';
+      config.choicesGridCols === 3 ? 'grid-cols-3' :
+        config.choicesGridCols === 4 ? 'grid-cols-4' : 'grid-cols-5';
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative overflow-x-hidden selection:bg-primary-500 selection:text-white">
-      
+
       {/* Background Decorative Blur Blobs */}
       <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-primary-600 filter blur-3xl opacity-10 animate-pulse-slow"></div>
       <div className="absolute top-2/3 right-1/4 w-96 h-96 rounded-full bg-accent-rose filter blur-3xl opacity-10 animate-pulse-slow"></div>
@@ -267,7 +288,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
@@ -275,7 +296,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
             Back
           </button>
           <span className="text-white/20">|</span>
-          <button 
+          <button
             onClick={handleHome}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
@@ -283,7 +304,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
             Home
           </button>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-sm font-mono text-gray-400">STAGE {config.stage}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></span>
@@ -296,12 +317,25 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
             Enabled Notes: {config.enabledNotesLabel}
           </div>
           {onNext && (
-            <button 
+            <button
+              disabled={!isNextLevelUnlocked()}
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md ${isNextLevelUnlocked()
+                ? 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/20 active:scale-95 text-xs md:text-sm font-bold'
+                : 'bg-slate-950/40 border border-white/5 text-gray-500 cursor-not-allowed shadow-none font-mono tracking-wider uppercase text-[10px] md:text-xs'
+                }`}
             >
-              Next Level
-              <ArrowRight className="w-3.5 h-3.5" />
+              {isNextLevelUnlocked() ? (
+                <>
+                  <span className="inline-block">Next Level</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                  <span>Next Level</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -309,7 +343,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
 
       {/* Main Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 pt-3 pb-8 md:pt-4 md:pb-12 flex flex-col relative z-10 space-y-4 md:space-y-6">
-        
+
         {/* Header Title */}
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-mono text-primary-400 uppercase tracking-widest font-bold block">Training Session</span>
@@ -321,7 +355,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
 
         {/* 2-Column Split: Keyboard on Left, Quiz Controls on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          
+
           {/* Keyboard Column (Left 7 Columns) */}
           <div className="lg:col-span-7 flex flex-col justify-center space-y-6">
             <div className="flex justify-between items-center text-xs font-mono text-gray-400 px-2">
@@ -330,7 +364,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
             </div>
 
             <div className="relative select-none w-full bg-slate-950 p-4 border border-white/10 rounded-3xl shadow-2xl flex aspect-[16/7] md:aspect-[16/6]">
-              
+
               {/* White Keys */}
               <div className="w-full h-full flex relative z-10 gap-1 md:gap-1.5">
                 {whiteKeys.map((key) => {
@@ -344,23 +378,20 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                       key={key.note}
                       disabled={!isEnabled || isPlaying}
                       onClick={() => handlePlayKey(key)}
-                      className={`flex-1 h-full rounded-b-2xl flex flex-col justify-end items-center pb-4 md:pb-6 transition-all duration-100 shadow-md ${
-                        isEnabled
-                          ? isPressed
-                            ? 'bg-primary-100 border-t-[6px] border-primary-500 pt-0 translate-y-0.5 shadow-none cursor-pointer'
-                            : 'bg-white hover:bg-slate-50 border-b-[6px] border-slate-300 cursor-pointer'
-                          : 'bg-slate-800/20 border-b-[6px] border-slate-950/40 opacity-20 cursor-not-allowed text-gray-600'
-                      }`}
+                      className={`flex-1 h-full rounded-b-2xl flex flex-col justify-end items-center pb-4 md:pb-6 transition-all duration-100 shadow-md ${isEnabled
+                        ? isPressed
+                          ? 'bg-primary-100 border-t-[6px] border-primary-500 pt-0 translate-y-0.5 shadow-none cursor-pointer'
+                          : 'bg-white hover:bg-slate-50 border-b-[6px] border-slate-300 cursor-pointer'
+                        : 'bg-slate-800/20 border-b-[6px] border-slate-950/40 opacity-20 cursor-not-allowed text-gray-600'
+                        }`}
                     >
                       <div className="text-center select-none pointer-events-none">
-                        <span className={`block text-xl md:text-3xl font-extrabold font-serif leading-none ${
-                          isEnabled ? 'text-slate-800' : 'text-slate-600'
-                        }`}>
+                        <span className={`block text-xl md:text-3xl font-extrabold font-serif leading-none ${isEnabled ? 'text-slate-800' : 'text-slate-600'
+                          }`}>
                           {key.label}
                         </span>
-                        <span className={`block text-xs md:text-sm font-bold font-sans mt-2 ${
-                          isEnabled ? 'text-primary-700' : 'text-slate-600'
-                        }`}>
+                        <span className={`block text-xs md:text-sm font-bold font-sans mt-2 ${isEnabled ? 'text-primary-700' : 'text-slate-600'
+                          }`}>
                           {displaySwara}
                         </span>
                       </div>
@@ -383,27 +414,24 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                     disabled={!isEnabled || isPlaying}
                     onClick={() => handlePlayKey(key)}
                     style={{ left: leftOffset, width: '8.4%' }}
-                    className={`absolute h-[62%] rounded-b-xl flex flex-col justify-end items-center pb-3 border-b-4 border-black border-x border-slate-950/40 transition-all z-30 ${
-                      isEnabled
-                        ? config.stage === 5
-                          ? isPressed
-                            ? 'bg-gradient-to-b from-violet-900 to-indigo-950 border-t-4 border-violet-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
-                            : 'bg-gradient-to-b from-indigo-900 to-violet-950 hover:from-indigo-800 hover:to-violet-900 border border-violet-500/55 hover:border-violet-400/80 shadow-[0_0_15px_rgba(139,92,246,0.45)] cursor-pointer'
-                          : isPressed
-                            ? 'bg-primary-900 border-t-4 border-primary-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
-                            : 'bg-slate-900 hover:bg-slate-800 border-slate-850 cursor-pointer'
-                        : 'bg-slate-900/10 opacity-20 cursor-not-allowed text-gray-600'
-                    }`}
+                    className={`absolute h-[62%] rounded-b-xl flex flex-col justify-end items-center pb-3 border-b-4 border-black border-x border-slate-950/40 transition-all z-30 ${isEnabled
+                      ? config.stage === 5
+                        ? isPressed
+                          ? 'bg-gradient-to-b from-violet-900 to-indigo-950 border-t-4 border-violet-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
+                          : 'bg-gradient-to-b from-indigo-900 to-violet-950 hover:from-indigo-800 hover:to-violet-900 border border-violet-500/55 hover:border-violet-400/80 shadow-[0_0_15px_rgba(139,92,246,0.45)] cursor-pointer'
+                        : isPressed
+                          ? 'bg-primary-900 border-t-4 border-primary-400 pt-0 translate-y-0.5 shadow-none cursor-pointer'
+                          : 'bg-slate-900 hover:bg-slate-800 border-slate-850 cursor-pointer'
+                      : 'bg-slate-900/10 opacity-20 cursor-not-allowed text-gray-600'
+                      }`}
                   >
                     <div className="text-center select-none pointer-events-none">
-                      <span className={`block text-sm md:text-base font-extrabold font-serif leading-none ${
-                        isEnabled && config.stage === 5 ? 'text-violet-100' : ''
-                      }`}>
+                      <span className={`block text-sm md:text-base font-extrabold font-serif leading-none ${isEnabled && config.stage === 5 ? 'text-violet-100' : ''
+                        }`}>
                         {key.label}
                       </span>
-                      <span className={`block text-[9px] md:text-xs font-bold font-sans mt-1.5 ${
-                        isEnabled && config.stage === 5 ? 'text-violet-300' : ''
-                      }`}>
+                      <span className={`block text-[9px] md:text-xs font-bold font-sans mt-1.5 ${isEnabled && config.stage === 5 ? 'text-violet-300' : ''
+                        }`}>
                         {displaySwara}
                       </span>
                     </div>
@@ -416,7 +444,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
 
           {/* Quiz Controls Column (Right 5 Columns) */}
           <div className="lg:col-span-5 flex flex-col justify-between glass rounded-3xl p-6 border-white/5 shadow-xl space-y-6">
-            
+
             {/* Header info / Score */}
             <div className="flex justify-between items-center pb-4 border-b border-white/5">
               <span className="text-sm font-bold text-white">Mystery Note Game</span>
@@ -446,7 +474,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                     {isPlaying && (
                       <div className="absolute inset-0 bg-primary-500/5 filter blur-xl animate-pulse"></div>
                     )}
-                    
+
                     {/* Audio wave animation container */}
                     <div className="flex items-center justify-center gap-1.5 h-8">
                       {[1, 2, 3, 4, 5, 6, 7].map((bar) => {
@@ -456,14 +484,13 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                         if (bar === 2 || bar === 6) { delay = '0.3s'; baseHeight = 'h-4'; }
                         if (bar === 3 || bar === 5) { delay = '0.45s'; baseHeight = 'h-6'; }
                         if (bar === 4) { delay = '0.2s'; baseHeight = 'h-8'; }
-                        
+
                         return (
-                          <div 
-                            key={bar} 
+                          <div
+                            key={bar}
                             style={{ animationDelay: delay }}
-                            className={`w-1 bg-primary-400 rounded transition-all duration-300 ${baseHeight} ${
-                              isPlaying ? 'animate-pulse scale-y-125' : 'opacity-40'
-                            }`}
+                            className={`w-1 bg-primary-400 rounded transition-all duration-300 ${baseHeight} ${isPlaying ? 'animate-pulse scale-y-125' : 'opacity-40'
+                              }`}
                           />
                         );
                       })}
@@ -477,11 +504,10 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                     <button
                       disabled={isPlaying}
                       onClick={replayMysteryNote}
-                      className={`w-full py-3 rounded-xl font-bold text-xs tracking-wider uppercase border transition-all flex items-center justify-center gap-2 cursor-pointer z-10 ${
-                        isPlaying
-                          ? 'bg-slate-900 border-white/5 text-gray-500 cursor-not-allowed'
-                          : 'bg-primary-600 hover:bg-primary-500 border-primary-500 text-white shadow-md shadow-primary-600/20 scale-100 hover:scale-[1.02]'
-                      }`}
+                      className={`w-full py-3 rounded-xl font-bold text-xs tracking-wider uppercase border transition-all flex items-center justify-center gap-2 cursor-pointer z-10 ${isPlaying
+                        ? 'bg-slate-900 border-white/5 text-gray-500 cursor-not-allowed'
+                        : 'bg-primary-600 hover:bg-primary-500 border-primary-500 text-white shadow-md shadow-primary-600/20 scale-100 hover:scale-[1.02]'
+                        }`}
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin' : ''}`} />
                       {isPlaying ? 'Playing...' : 'Replay Sound'}
@@ -503,7 +529,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                         const isSelected = selectedGuess === choiceName;
                         const isCorrectAnswer = config.checkAnswer(targetNote, choiceName).isCorrect;
                         const showResult = feedback.status !== 'idle';
-                        
+
                         let btnStyle = "bg-slate-900 border-white/10 text-white hover:border-primary-500 hover:bg-slate-900/80";
                         if (isSelected && !showResult) btnStyle = "bg-primary-600/30 border-primary-500 text-white";
                         if (showResult) {
@@ -537,11 +563,10 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
             <div className="pt-4 border-t border-white/5 min-h-[90px] flex flex-col justify-end">
               {feedback.status !== 'idle' && (
                 <div className="space-y-4 text-left">
-                  <div className={`p-4 rounded-xl text-xs flex gap-2 items-start ${
-                    feedback.status === 'correct' 
-                      ? 'bg-green-950/40 border border-green-500/30 text-green-300' 
-                      : 'bg-red-950/40 border border-red-500/30 text-red-300'
-                  }`}>
+                  <div className={`p-4 rounded-xl text-xs flex gap-2 items-start ${feedback.status === 'correct'
+                    ? 'bg-green-950/40 border border-green-500/30 text-green-300'
+                    : 'bg-red-950/40 border border-red-500/30 text-red-300'
+                    }`}>
                     {feedback.status === 'correct' ? <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
                     <div>
                       <p className="font-semibold">{feedback.status === 'correct' ? 'Correct!' : 'Incorrect'}</p>
@@ -555,12 +580,50 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                       <p className="text-xs text-gray-300 text-center">
                         You scored <strong className="text-white text-sm">{score}</strong> out of {quizDeck.length || 10} rounds.
                       </p>
-                      <button
-                        onClick={resetQuiz}
-                        className="w-full py-2.5 rounded-xl font-bold bg-primary-600 hover:bg-primary-500 text-white flex items-center justify-center gap-1.5 transition-all text-sm cursor-pointer"
-                      >
-                        Start New Quiz
-                      </button>
+
+                      {completionResponse && (
+                        <div className={`p-3 rounded-lg text-center text-xs font-semibold ${completionResponse.pass
+                          ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                          : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                          }`}>
+                          {completionResponse.pass ? (
+                            <>
+                              <p className="font-bold text-sm">🎉 Level Passed!</p>
+                              <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
+                              <p className="text-[10px] text-green-300 mt-0.5">Next Level Unlocked!</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-bold text-sm">❌ Level Failed</p>
+                              <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
+                              <p className="text-[10px] text-red-300 mt-0.5">
+                                Scored {score} correct (requires {(quizDeck.length || 10) >= 25 ? 20 : (quizDeck.length || 10) >= 20 ? 16 : (quizDeck.length || 10) >= 15 ? 12 : 8} to unlock next level)
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={resetQuiz}
+                          className="flex-1 py-2.5 rounded-xl font-bold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
+                        >
+                          Retry
+                        </button>
+                        {completionResponse?.pass && onNext && (
+                          <button
+                            onClick={() => {
+                              resetQuiz();
+                              onNext();
+                            }}
+                            className="flex-1 py-2.5 rounded-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-md shadow-primary-600/20"
+                          >
+                            Next Level
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <button

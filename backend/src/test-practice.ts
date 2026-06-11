@@ -70,7 +70,7 @@ async function runTests() {
 
     // 4. Finish Session
     console.log('\n[Test 3] Finishing practice session (Duration: 15000ms)...');
-    const sessionResult = await service.finishSession(testUserId, sessionId, 15000);
+    const { session: sessionResult } = await service.finishSession(testUserId, sessionId, 15000);
     console.log('Finished Session details:', sessionResult);
 
     // Assert accuracy, total questions, correct answers

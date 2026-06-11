@@ -2,11 +2,16 @@ import { createContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, Session, AuthResponse, AuthError } from '@supabase/supabase-js';
+import { getUserProgress } from '../lib/api';
+import type { UserProgress } from '../lib/api';
 
 export interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  progress: UserProgress | null;
+  updateProgress: (prog: UserProgress) => void;
+  refreshProgress: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: Record<string, any>) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signInWithGoogle: () => Promise<{ data: any; error: AuthError | null }>;
@@ -19,7 +24,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [progress, setProgress] = useState<UserProgress | null>(null);
   const initializedUserIdRef = useRef<string | null>(null);
+
+  const updateProgress = (prog: UserProgress) => {
+    setProgress(prog);
+  };
+
+  const refreshProgress = async () => {
+    if (!session) {
+      setProgress(null);
+      return;
+    }
+    try {
+      const prog = await getUserProgress(session.access_token);
+      setProgress(prog);
+    } catch (err) {
+      console.error('[AuthProvider] Error refreshing progress:', err);
+    }
+  };
 
   useEffect(() => {
     // Get initial session
@@ -28,6 +51,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
+        if (session) {
+          try {
+            const prog = await getUserProgress(session.access_token);
+            setProgress(prog);
+          } catch (err) {
+            console.error('Error fetching initial progress:', err);
+          }
+        }
       } catch (err) {
         console.error('Error fetching initial session:', err);
       } finally {
@@ -47,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const currentUserId = currentSession?.user?.id || null;
         if (!currentSession) {
           initializedUserIdRef.current = null;
+          setProgress(null);
         }
 
         // Auto-initialize local database user profile on session load or login
@@ -74,6 +106,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
               const resData = await response.json();
               console.log('[AuthProvider] Local user profile synchronized:', resData);
+              // Fetch user progress here!
+              try {
+                const prog = await getUserProgress(currentSession.access_token);
+                setProgress(prog);
+              } catch (err) {
+                console.error('[AuthProvider] Error fetching progress after profile sync:', err);
+              }
             }
           } catch (err) {
             console.error('[AuthProvider] Error contacting local backend for profile sync:', err);
@@ -120,7 +159,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        progress,
+        updateProgress,
+        refreshProgress,
+        signUp,
+        signIn,
+        signInWithGoogle,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
