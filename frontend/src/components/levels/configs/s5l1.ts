@@ -16,11 +16,11 @@ export const s5l1Config: QuizConfig = {
   referenceNotes: ['C#4', 'D4'],
   generateDeck: () => {
     const deck: string[] = [];
-    // 5 of each note
-    for (let i = 0; i < 5; i++) {
-      deck.push('C#4');
-      deck.push('D4');
+    const notes = ['C#4', 'D4'];
+    for (let i = 0; i < 7; i++) {
+      deck.push(...notes);
     }
+    deck.push(notes[Math.floor(Math.random() * notes.length)]); // 15 total
     // Shuffle using Fisher-Yates
     for (let i = deck.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

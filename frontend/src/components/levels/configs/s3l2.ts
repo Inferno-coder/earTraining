@@ -9,7 +9,7 @@ export const s3l2Config: QuizConfig = {
   enabledNotesLabel: 'All Swaras (Sa to Sa\')',
   choices: [],
   referenceNotes: notesList,
-  generateDeck: () => generateSequenceDeck(3),
+  generateDeck: () => generateSequenceDeck(3, 15),
   playTarget: playSequenceTarget,
   checkAnswer: (target, guess) => {
     const isCorrect = guess === target.correctAnswer;

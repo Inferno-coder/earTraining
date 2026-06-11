@@ -22,10 +22,11 @@ export const s2l5Config: QuizConfig = {
   referenceNotes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
   generateDeck: () => {
     const swarasList = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
-    const deck = [...swarasList];
-    // Add 2 random duplicates to make exactly 10 rounds
-    deck.push(swarasList[Math.floor(Math.random() * swarasList.length)]);
-    deck.push(swarasList[Math.floor(Math.random() * swarasList.length)]);
+    const deck = [...swarasList, ...swarasList]; // 16 notes
+    // Add 4 random duplicates to make exactly 20 rounds
+    for (let i = 0; i < 4; i++) {
+      deck.push(swarasList[Math.floor(Math.random() * swarasList.length)]);
+    }
     
     // Shuffle the deck using Fisher-Yates
     for (let i = deck.length - 1; i > 0; i--) {

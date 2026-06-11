@@ -37,7 +37,7 @@ export const s5l6Config: QuizConfig = {
   referenceNotes: ['C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4', 'C5'],
   generateDeck: () => {
     const list = Object.keys(noteToSwarasthana);
-    const deck = [...list]; // 10 unique swarasthanas
+    const deck = [...list, ...list]; // 20 unique swarasthanas
     // Shuffle using Fisher-Yates
     for (let i = deck.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

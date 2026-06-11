@@ -16,10 +16,11 @@ export const s5l5Config: QuizConfig = {
   referenceNotes: ['A#4', 'B4'],
   generateDeck: () => {
     const deck: string[] = [];
-    for (let i = 0; i < 5; i++) {
-      deck.push('A#4');
-      deck.push('B4');
+    const notes = ['A#4', 'B4'];
+    for (let i = 0; i < 7; i++) {
+      deck.push(...notes);
     }
+    deck.push(notes[Math.floor(Math.random() * notes.length)]); // 15 total
     for (let i = deck.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [deck[i], deck[j]] = [deck[j], deck[i]];

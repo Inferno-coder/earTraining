@@ -32,6 +32,15 @@ const speedSettings = {
   fast: { noteDur: '0.22s', delay: 320 }
 };
 
+const getReconstructionTotalQuestions = (length: number): number => {
+  if (length === 3) return 15;
+  if (length === 4) return 20;
+  if (length === 5) return 20;
+  if (length === 6) return 25;
+  if (length === 7) return 25;
+  return 15; // fallback
+};
+
 interface ReconstructionEngineProps {
   config: ReconstructionConfig;
   onBack: () => void;
@@ -173,7 +182,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
   // Play target sequence melody
   const handlePlaySequence = async () => {
-    if (isPlaying || targetSequence.length === 0) return;
+    const totalRounds = getReconstructionTotalQuestions(sequenceLength);
+    if (isPlaying || targetSequence.length === 0 || attempts >= totalRounds) return;
     setIsPlaying(true);
     setRoundStatus('playing');
     setUserSequence([]);
@@ -199,7 +209,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
   // Handle user swara button tap
   const handleTapSwara = async (swara: string) => {
-    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || !sessionId) return;
+    const totalRounds = getReconstructionTotalQuestions(sequenceLength);
+    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || !sessionId || attempts >= totalRounds) return;
 
     // Play note sound instantly
     const details = getSwaraDetails(swara);
@@ -218,7 +229,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       const targetSwaras = targetSequence.map(note => config.noteToSwara[note]);
       const isCorrect = updatedUserSeq.every((s, idx) => s === targetSwaras[idx]);
 
-      setAttempts(prev => prev + 1);
+      const newAttemptsCount = attempts + 1;
+      setAttempts(newAttemptsCount);
       if (isCorrect) {
         setScore(prev => prev + 1);
         setRoundStatus('correct');
@@ -243,6 +255,18 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
           });
         } catch (err) {
           console.error('[ReconstructionEngine] Failed to log reconstruction attempt:', err);
+        }
+      }
+
+      // Finish session automatically if rounds are complete
+      if (newAttemptsCount >= totalRounds && session?.access_token && !sessionFinished) {
+        const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+        try {
+          setSessionFinished(true);
+          await finishPracticeSession(session.access_token, sessionId, durationMs);
+          console.log('[ReconstructionEngine] Practice session finished successfully');
+        } catch (err) {
+          console.error('[ReconstructionEngine] Failed to finish practice session:', err);
         }
       }
     }
@@ -528,7 +552,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
               <div className={`grid ${keypadColClass} gap-2`}>
                 {config.swaraButtons.map((swara) => {
                   const details = getSwaraDetails(swara);
-                  const isDisabled = isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect';
+                  const totalRounds = getReconstructionTotalQuestions(sequenceLength);
+                  const isDisabled = isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || attempts >= totalRounds;
                   return (
                     <button
                       key={swara}
@@ -549,60 +574,85 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex flex-wrap gap-2.5 justify-end pt-2 border-t border-white/5 min-h-[48px]">
-              {roundStatus === 'entering' && (
-                <>
+            <div className="flex flex-col space-y-4 pt-4 border-t border-white/5 w-full">
+              {attempts >= getReconstructionTotalQuestions(sequenceLength) ? (
+                <div className="p-4 bg-primary-950/40 border border-primary-500/30 rounded-xl space-y-3 w-full">
+                  <p className="text-sm font-bold text-white text-center">🏁 Level Complete!</p>
+                  <p className="text-xs text-gray-300 text-center">
+                    You scored <strong className="text-white text-sm">{score}</strong> out of {getReconstructionTotalQuestions(sequenceLength)} rounds ({Math.round((score / getReconstructionTotalQuestions(sequenceLength)) * 100)}%).
+                  </p>
                   <button
-                    disabled={userSequence.length === 0}
-                    onClick={handleUndo}
-                    className="py-2 px-3 text-xs font-semibold rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      setScore(0);
+                      setAttempts(0);
+                      setSessionId(null);
+                      setSessionStartTime(null);
+                      setSessionFinished(false);
+                      startNewRound(sequenceLength);
+                      initSession();
+                    }}
+                    className="w-full py-2.5 rounded-xl font-bold bg-primary-600 hover:bg-primary-500 text-white flex items-center justify-center gap-1.5 transition-all text-sm cursor-pointer"
                   >
-                    <Delete className="w-3.5 h-3.5" />
-                    Backspace
+                    Start New Practice
                   </button>
-                  <button
-                    disabled={userSequence.length === 0}
-                    onClick={handleClear}
-                    className="py-2 px-3 text-xs font-semibold rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Clear
-                  </button>
-                </>
-              )}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2.5 justify-end min-h-[48px] w-full">
+                  {roundStatus === 'entering' && (
+                    <>
+                      <button
+                        disabled={userSequence.length === 0}
+                        onClick={handleUndo}
+                        className="py-2 px-3 text-xs font-semibold rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Delete className="w-3.5 h-3.5" />
+                        Backspace
+                      </button>
+                      <button
+                        disabled={userSequence.length === 0}
+                        onClick={handleClear}
+                        className="py-2 px-3 text-xs font-semibold rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Clear
+                      </button>
+                    </>
+                  )}
 
-              {roundStatus === 'incorrect' && (
-                <>
-                  <button
-                    onClick={() => setShowAnswer(!showAnswer)}
-                    className="py-2 px-3.5 text-xs font-semibold rounded-xl bg-amber-500/10 border border-amber-500/30 text-accent-amber hover:bg-amber-500/20 transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    {showAnswer ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    {showAnswer ? 'Hide Answer' : 'Show Answer'}
-                  </button>
-                  <button
-                    onClick={handleRetrySame}
-                    className="py-2 px-3.5 text-xs font-bold rounded-xl bg-white/10 border border-white/10 text-white hover:bg-white/15 transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Retry
-                  </button>
-                  <button
-                    onClick={() => startNewRound(sequenceLength)}
-                    className="py-2 px-3.5 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    Next Melody
-                  </button>
-                </>
-              )}
+                  {roundStatus === 'incorrect' && (
+                    <>
+                      <button
+                        onClick={() => setShowAnswer(!showAnswer)}
+                        className="py-2 px-3.5 text-xs font-semibold rounded-xl bg-amber-500/10 border border-amber-500/30 text-accent-amber hover:bg-amber-500/20 transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        {showAnswer ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        {showAnswer ? 'Hide Answer' : 'Show Answer'}
+                      </button>
+                      <button
+                        onClick={handleRetrySame}
+                        className="py-2 px-3.5 text-xs font-bold rounded-xl bg-white/10 border border-white/10 text-white hover:bg-white/15 transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Retry
+                      </button>
+                      <button
+                        onClick={() => startNewRound(sequenceLength)}
+                        className="py-2 px-3.5 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        Next Melody
+                      </button>
+                    </>
+                  )}
 
-              {roundStatus === 'correct' && (
-                <button
-                  onClick={() => startNewRound(sequenceLength)}
-                  className="py-2.5 px-5 text-xs font-bold rounded-xl bg-green-600 hover:bg-green-500 text-white transition-all flex items-center gap-1 cursor-pointer shadow-md shadow-green-600/20"
-                >
-                  Correct! Next Melody
-                </button>
+                  {roundStatus === 'correct' && (
+                    <button
+                      onClick={() => startNewRound(sequenceLength)}
+                      className="py-2.5 px-5 text-xs font-bold rounded-xl bg-green-600 hover:bg-green-500 text-white transition-all flex items-center gap-1 cursor-pointer shadow-md shadow-green-600/20"
+                    >
+                      Correct! Next Melody
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 

@@ -15,8 +15,8 @@ export const s2l4Config: QuizConfig = {
   choices: ['Dha', 'Ni'],
   referenceNotes: ['A4', 'B4'],
   generateDeck: () => {
-    // 10 rounds: 5 Dha, 5 Ni
-    const deck = ['A4', 'A4', 'A4', 'A4', 'A4', 'B4', 'B4', 'B4', 'B4', 'B4'];
+    // 15 rounds: 8 of one note, 7 of the other note
+    const deck = ['A4', 'A4', 'A4', 'A4', 'A4', 'A4', 'A4', 'A4', 'B4', 'B4', 'B4', 'B4', 'B4', 'B4', 'B4'];
     
     // Shuffle the deck using Fisher-Yates
     for (let i = deck.length - 1; i > 0; i--) {

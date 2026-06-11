@@ -159,7 +159,8 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       setQuizDeck(currentDeck);
     }
 
-    const chosen = currentDeck[attempts % 10];
+    const totalRounds = currentDeck.length || 10;
+    const chosen = currentDeck[attempts % totalRounds];
     setTargetNote(chosen);
     setAttemptStartTime(Date.now());
 
@@ -223,7 +224,8 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       }
     }
 
-    if (newAttemptsCount >= 10 && session?.access_token && !sessionFinished) {
+    const totalRounds = quizDeck.length || 10;
+    if (newAttemptsCount >= totalRounds && session?.access_token && !sessionFinished) {
       const durationMs = sessionStartTime ? now - sessionStartTime : 0;
       try {
         setSessionFinished(true);
@@ -547,11 +549,11 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
                     </div>
                   </div>
 
-                  {attempts >= 10 ? (
+                  {attempts >= (quizDeck.length || 10) ? (
                     <div className="p-4 bg-primary-950/40 border border-primary-500/30 rounded-xl space-y-3">
                       <p className="text-sm font-bold text-white text-center">🏁 Level {config.level} Complete!</p>
                       <p className="text-xs text-gray-300 text-center">
-                        You scored <strong className="text-white text-sm">{score}</strong> out of 10 rounds.
+                        You scored <strong className="text-white text-sm">{score}</strong> out of {quizDeck.length || 10} rounds.
                       </p>
                       <button
                         onClick={resetQuiz}
