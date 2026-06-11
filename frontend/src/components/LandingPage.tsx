@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { 
-  Music, 
+import {
+  Music,
   ArrowRight,
   ChevronRight,
   Shield,
@@ -93,7 +93,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-primary-500 selection:text-white">
-      
+
       {/* Background Decorative Blur Blobs */}
       <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-primary-600 filter blur-3xl opacity-10 animate-pulse-slow"></div>
       <div className="absolute top-2/3 right-1/4 w-96 h-96 rounded-full bg-accent-rose filter blur-3xl opacity-10 animate-pulse-slow"></div>
@@ -111,19 +111,19 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <span className="block text-[10px] text-gray-400 font-mono tracking-widest uppercase">Carnatic Music Lab</span>
           </div>
         </div>
-        
+
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
           <a href="#raga-explorer" className="hover:text-white transition-colors">Raga Scales</a>
           <a href="#methodology" className="hover:text-white transition-colors">How it Works</a>
-          <button 
+          <button
             onClick={() => setShowCurriculumModal(true)}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
           >
             <BookOpen className="w-4 h-4 text-primary-400" />
             Curriculum
           </button>
-          <button 
+          <button
             onClick={() => setShowCustomPracticeModal(true)}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
           >
@@ -133,7 +133,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
         </nav>
 
         <div>
-          <button 
+          <button
             onClick={onLaunch}
             className="px-5 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-white transition-all shadow-md shadow-primary-600/20 hover:scale-[1.03] cursor-pointer btn-shimmer"
           >
@@ -144,7 +144,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 md:px-8 py-12 md:py-20 relative z-10 space-y-24 md:space-y-32">
-        
+
         {/* Hero Section */}
         <section className="flex flex-col lg:flex-row gap-12 items-center text-left">
           <div className="flex-1 space-y-6">
@@ -152,14 +152,14 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <Zap className="w-3.5 h-3.5 animate-pulse text-amber-500" />
               Revolutionizing Swara Ear Training
             </div>
-            
+
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
               Master the Geometry of <br />
               <span className="bg-gradient-to-r from-primary-400 via-primary-500 to-accent-amber bg-clip-text text-transparent text-primary-glow">
                 Carnatic Swarasthanas
               </span>
             </h1>
-            
+
             <p className="text-gray-300 text-base md:text-lg max-w-2xl leading-relaxed">
               SvaraSadhana is a dedicated ear training and vocal pitch recognition laboratory designed for South Indian classical music. Train your mind to identify microtonal intervals, refine your vocal swara precision, and align with the pure resonance of the Tanpura.
             </p>
@@ -181,7 +181,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 <Sliders className="w-4 h-4 group-hover:rotate-45 transition-transform" />
                 Custom Practice Room
               </button>
-              
+
               <button
                 onClick={() => {
                   setActiveTab(1);
@@ -192,19 +192,12 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 <BookOpen className="w-4 h-4" />
                 View Curriculum
               </button>
-
-              <a
-                href="#raga-explorer"
-                className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all cursor-pointer"
-              >
-                Browse Ragas
-              </a>
             </div>
           </div>
 
           {/* Interactive CSS Dashboard Visual Mockup */}
           <div className="w-full lg:w-[480px] p-6 bg-slate-900/40 border border-white/10 rounded-3xl relative overflow-hidden shadow-2xl backdrop-blur-md">
-            
+
             {/* Visualizer Header Mockup */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
@@ -220,13 +213,13 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <div className="h-48 rounded-2xl bg-black/40 border border-white/5 relative flex flex-col items-center justify-center mb-6 overflow-hidden">
               {/* Radial gradient background */}
               <div className="absolute inset-0 bg-radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%)"></div>
-              
+
               {/* Animated wave lines */}
               <div className="absolute inset-x-0 bottom-0 h-16 flex items-end justify-center gap-1 opacity-20 px-8">
                 {[40, 60, 45, 90, 80, 55, 75, 60, 45, 80, 100, 70, 50, 65, 85, 40].map((h, i) => (
-                  <div 
-                    key={i} 
-                    className="w-1 bg-primary-400 rounded-t" 
+                  <div
+                    key={i}
+                    className="w-1 bg-primary-400 rounded-t"
                     style={{ height: `${h}%` }}
                   />
                 ))}
@@ -259,13 +252,12 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 { name: 'Ni', active: false },
                 { name: 'Sa\'', active: false }
               ].map((swara) => (
-                <div 
+                <div
                   key={swara.name}
-                  className={`p-3 rounded-xl border text-center transition-all ${
-                    swara.active 
-                      ? 'bg-gradient-to-br from-primary-700/50 to-primary-900/50 border-primary-500 shadow-md shadow-primary-700/20 scale-[1.03]' 
-                      : 'bg-slate-950/60 border-white/5 opacity-85'
-                  }`}
+                  className={`p-3 rounded-xl border text-center transition-all ${swara.active
+                    ? 'bg-gradient-to-br from-primary-700/50 to-primary-900/50 border-primary-500 shadow-md shadow-primary-700/20 scale-[1.03]'
+                    : 'bg-slate-950/60 border-white/5 opacity-85'
+                    }`}
                 >
                   <span className={`block text-lg font-extrabold font-serif ${swara.active ? 'text-white' : 'text-primary-300'}`}>
                     {swara.name}
@@ -301,7 +293,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
+
             {/* Feature 1 */}
             <div className="glass rounded-2xl p-6 text-left border-white/5 glass-hover">
               <div className="w-12 h-12 rounded-xl bg-primary-500/10 border border-primary-500/25 flex items-center justify-center text-primary-400 mb-6 shadow-inner">
@@ -365,11 +357,10 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                   <button
                     key={raga}
                     onClick={() => setSelectedRaga(raga)}
-                    className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm text-left flex justify-between items-center transition-all cursor-pointer ${
-                      selectedRaga === raga
-                        ? 'bg-primary-600 text-white font-bold shadow-md shadow-primary-700/20'
-                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                    }`}
+                    className={`w-full py-3.5 px-4 rounded-xl font-semibold text-sm text-left flex justify-between items-center transition-all cursor-pointer ${selectedRaga === raga
+                      ? 'bg-primary-600 text-white font-bold shadow-md shadow-primary-700/20'
+                      : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                      }`}
                   >
                     <span>{raga}</span>
                     <ChevronRight className="w-4 h-4 opacity-70" />
@@ -400,8 +391,8 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest block">Swaras in Scale</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {RAGA_PREVIEWS[selectedRaga].swaras.map((swara) => (
-                    <div 
-                      key={swara.name} 
+                    <div
+                      key={swara.name}
                       className="p-3 bg-white/5 border border-white/5 rounded-xl hover:border-primary-500/30 transition-all text-left"
                     >
                       <div className="flex justify-between items-center mb-1">
@@ -428,7 +419,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            
+
             {/* Step 1 */}
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-lg bg-primary-600/10 border border-primary-500/20 flex items-center justify-center font-mono font-bold text-primary-400">
@@ -468,7 +459,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
         {/* CTA Launch Section */}
         <section id="launch" className="glass rounded-3xl p-8 md:p-16 text-center border-white/5 relative overflow-hidden bg-gradient-to-tr from-slate-950 via-slate-900/60 to-slate-950 shadow-2xl">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-primary-600 filter blur-3xl opacity-10 -z-10"></div>
-          
+
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="inline-flex p-3 rounded-2xl bg-primary-600/15 border border-primary-500/30 text-primary-400 mb-2">
               <Zap className="w-6 h-6 animate-pulse" />
@@ -478,7 +469,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               Start building your swara recognition today. Perfect for classical students, amateur singers, and seasoned musicians aiming for absolute pitch perfection.
             </p>
             <div className="pt-4 flex justify-center">
-              <button 
+              <button
                 onClick={onLaunch}
                 className="flex items-center gap-2 mx-auto px-8 py-4 rounded-xl font-extrabold text-white shadow-xl transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-shimmer btn-glow group"
               >
@@ -507,11 +498,11 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
       {/* Curriculum / Syllabus Modal Overlay */}
       {showCurriculumModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 cursor-pointer" 
+          <div
+            className="absolute inset-0 cursor-pointer"
             onClick={() => setShowCurriculumModal(false)}
           />
-          
+
           <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col relative shadow-2xl z-10 animate-fade-in-up">
             {/* Header */}
             <div className="p-6 border-b border-white/5 flex justify-between items-start">
@@ -524,7 +515,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                   A systematic 5-stage training path from absolute pitch basics to Carnatic microtonal mastery.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCurriculumModal(false)}
                 className="bg-white/5 hover:bg-white/10 border border-white/10 p-2 rounded-xl text-gray-400 hover:text-white transition-colors cursor-pointer"
               >
@@ -534,7 +525,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
 
             {/* Tabs Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 flex-1 overflow-hidden">
-              
+
               {/* Left Column Tabs Selector */}
               <div className="bg-slate-950/50 p-4 border-r border-white/5 space-y-2 overflow-y-auto max-h-[20vh] md:max-h-none">
                 {[
@@ -547,11 +538,10 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full text-left p-3.5 rounded-2xl transition-all cursor-pointer flex flex-col gap-1 ${
-                      activeTab === tab.id
-                        ? 'bg-primary-600/20 border border-primary-500/40 text-white shadow-inner'
-                        : 'hover:bg-white/5 border border-transparent text-gray-400 hover:text-gray-200'
-                    }`}
+                    className={`w-full text-left p-3.5 rounded-2xl transition-all cursor-pointer flex flex-col gap-1 ${activeTab === tab.id
+                      ? 'bg-primary-600/20 border border-primary-500/40 text-white shadow-inner'
+                      : 'hover:bg-white/5 border border-transparent text-gray-400 hover:text-gray-200'
+                      }`}
                   >
                     <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-primary-400">{tab.name}</span>
                     <span className="text-sm font-bold leading-tight">{tab.title}</span>
@@ -562,7 +552,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
 
               {/* Right Column Content Area */}
               <div className="col-span-3 p-6 overflow-y-auto space-y-6 max-h-[50vh] md:max-h-[60vh]">
-                
+
                 {/* Stage Title and Summary */}
                 <div className="space-y-2 text-left">
                   <div className="flex items-center gap-2">
@@ -598,7 +588,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 {/* Levels Timeline */}
                 <div className="space-y-4">
                   <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest block text-left">Stage Levels</span>
-                  
+
                   <div className="space-y-3">
                     {activeTab === 1 && [
                       { level: "Level 0", title: "Pitch Exploration Sandbox", desc: "Interact with white and black keys to examine C4 to C5 pitches and see their Carnatic equivalents." },
@@ -701,7 +691,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
       )}
 
       {/* Custom Practice Modal */}
-      <CustomPracticeModal 
+      <CustomPracticeModal
         isOpen={showCustomPracticeModal}
         onClose={() => setShowCustomPracticeModal(false)}
       />
