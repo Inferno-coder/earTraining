@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { authMiddleware } from './middleware/auth.middleware';
 import userRoutes from './routes/user.routes';
+import practiceRoutes from './routes/practice.routes';
 import { initializeDatabase } from './db/init';
 
 // Load environment variables
@@ -19,6 +20,9 @@ app.use(express.json());
 
 // Mount user routes
 app.use('/api/users', userRoutes);
+
+// Mount practice history routes
+app.use('/api/practice', practiceRoutes);
 
 // Public health check route
 app.get('/health', (req, res) => {

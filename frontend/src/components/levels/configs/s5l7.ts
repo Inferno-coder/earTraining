@@ -3,8 +3,8 @@ import type { ReconstructionConfig } from './types';
 export const s5l7Config: ReconstructionConfig = {
   stage: 5,
   level: 7,
-  title: 'Swarasthana Sequence Dictation',
-  subtitle: 'Listen to a short melody containing swarasthana variations and reconstruct it note-by-note using the swara pads. Goal: 80%+ accuracy.',
+  title: 'Advanced Swarasthana Dictation',
+  subtitle: 'Listen to an advanced melodic phrase containing mixed swarasthanas and recreate it note-by-note. Goal: 80%+ accuracy.',
   enabledNotesLabel: 'All 12 Swarasthanas',
   notesList: ['C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4', 'C5'],
   swaraButtons: ['Sa', 'R1', 'R2', 'G2', 'G3', 'M1', 'M2', 'Pa', 'D1', 'D2', 'N2', 'N3', "Sa'"],
@@ -38,7 +38,7 @@ export const s5l7Config: ReconstructionConfig = {
     'N3': 'B4',
     "Sa'": 'C5'
   },
-  minLength: 2,
-  maxLength: 4,
+  minLength: 3,
+  maxLength: 7,
   defaultLength: 3
 };

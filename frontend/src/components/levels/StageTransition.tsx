@@ -141,8 +141,7 @@ export default function StageTransition({ stage, onBegin, onHome }: StageTransit
         { name: 'Level 4', title: 'Dhaivata Recognition (D1 vs D2)', desc: 'Classify Shuddha Dhaivatam (D1) vs Chatusruti Dhaivatam (D2).' },
         { name: 'Level 5', title: 'Nishada Recognition (N2 vs N3)', desc: 'Classify Kaisiki Nishadam (N2) vs Kakali Nishadam (N3).' },
         { name: 'Level 6', title: 'Mixed Swarasthana Recognition', desc: 'Classify any of the 10 swarasthana variations played in isolation.' },
-        { name: 'Level 7', title: 'Swarasthana Sequence Dictation', desc: 'Reconstruct short melodic sequences (2 to 4 notes) containing swarasthanas.' },
-        { name: 'Level 8', title: 'Advanced Swarasthana Dictation', desc: 'Reconstruct longer melodic phrases (4 to 7 notes) containing mixed swarasthanas.' }
+        { name: 'Level 7', title: 'Advanced Swarasthana Dictation', desc: 'Reconstruct melodic phrases (3 to 7 notes) containing mixed swarasthanas.' }
       ]
     }
   }[stage];

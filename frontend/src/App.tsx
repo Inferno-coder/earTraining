@@ -27,10 +27,9 @@ import { s5l4Config } from './components/levels/configs/s5l4';
 import { s5l5Config } from './components/levels/configs/s5l5';
 import { s5l6Config } from './components/levels/configs/s5l6';
 import { s5l7Config } from './components/levels/configs/s5l7';
-import { s5l8Config } from './components/levels/configs/s5l8';
 import ReconstructionEngine from './components/levels/ReconstructionEngine';
 
-type ViewState = 'landing' | 't1' | 's1l0' | 's1l1' | 's1l2' | 't2' | 's2l1' | 's2l2' | 's2l3' | 's2l4' | 's2l5' | 't3' | 's3l1' | 's3l2' | 's3l3' | 't4' | 's4l1' | 't5' | 's5l1' | 's5l2' | 's5l3' | 's5l4' | 's5l5' | 's5l6' | 's5l7' | 's5l8';
+type ViewState = 'landing' | 't1' | 's1l0' | 's1l1' | 's1l2' | 't2' | 's2l1' | 's2l2' | 's2l3' | 's2l4' | 's2l5' | 't3' | 's3l1' | 's3l2' | 's3l3' | 't4' | 's4l1' | 't5' | 's5l1' | 's5l2' | 's5l3' | 's5l4' | 's5l5' | 's5l6' | 's5l7';
 
 function App() {
   return (
@@ -224,14 +223,6 @@ function AppContent() {
         <ReconstructionEngine
           config={s5l7Config}
           onBack={() => setView('s5l6')}
-          onNext={() => setView('s5l8')}
-          onHome={() => setView('landing')}
-        />
-      )}
-      {view === 's5l8' && (
-        <ReconstructionEngine
-          config={s5l8Config}
-          onBack={() => setView('s5l7')}
           onHome={() => setView('landing')}
         />
       )}

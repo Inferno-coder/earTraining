@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Play, Home } from 'lucide-react';
 import { playNote } from '../../utils/audio';
 import type { QuizConfig } from './configs/types';
+import { useAuth } from '../../auth/useAuth';
+import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
 
 interface KeyboardKey {
   note: string;
@@ -55,6 +57,13 @@ interface QuizEngineProps {
 }
 
 export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngineProps) {
+  // Auth & API states
+  const { session } = useAuth();
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
+  const [sessionFinished, setSessionFinished] = useState<boolean>(false);
+
   // Sound states
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,6 +79,46 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
   const [score, setScore] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const [quizDeck, setQuizDeck] = useState<any[]>([]);
+
+  const initSession = async () => {
+    if (!session?.access_token) return;
+    try {
+      const sid = await startPracticeSession(session.access_token, config.stage, config.level);
+      setSessionId(sid);
+      setSessionStartTime(Date.now());
+      setSessionFinished(false);
+    } catch (err) {
+      console.error('[QuizEngine] Failed to start practice session:', err);
+    }
+  };
+
+  const endSession = async () => {
+    if (session?.access_token && sessionId && sessionStartTime && !sessionFinished) {
+      const durationMs = Date.now() - sessionStartTime;
+      try {
+        setSessionFinished(true);
+        await finishPracticeSession(session.access_token, sessionId, durationMs);
+        console.log('[QuizEngine] Practice session finished successfully');
+      } catch (err) {
+        console.error('[QuizEngine] Failed to finish practice session on navigation:', err);
+      }
+    }
+  };
+
+  const handleBack = async () => {
+    await endSession();
+    onBack();
+  };
+
+  const handleHome = async () => {
+    await endSession();
+    onHome();
+  };
+
+  const handleNext = async () => {
+    await endSession();
+    if (onNext) onNext();
+  };
 
   // Initialize deck on mount or when configuration config changes
   useEffect(() => {
@@ -112,6 +161,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
 
     const chosen = currentDeck[attempts % 10];
     setTargetNote(chosen);
+    setAttemptStartTime(Date.now());
 
     try {
       await config.playTarget(chosen);
@@ -136,11 +186,12 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
   };
 
   // Handle choice selection
-  const handleSelectChoice = (guess: string) => {
-    if (!targetNote || feedback.status !== 'idle' || isPlaying) return;
+  const handleSelectChoice = async (guess: string) => {
+    if (!targetNote || feedback.status !== 'idle' || isPlaying || !sessionId) return;
     
     setSelectedGuess(guess);
-    setAttempts(prev => prev + 1);
+    const newAttemptsCount = attempts + 1;
+    setAttempts(newAttemptsCount);
 
     const { isCorrect, message } = config.checkAnswer(targetNote, guess);
 
@@ -151,6 +202,37 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       status: isCorrect ? 'correct' : 'incorrect',
       message
     });
+
+    const now = Date.now();
+    const responseTimeMs = attemptStartTime ? now - attemptStartTime : null;
+
+    if (session?.access_token) {
+      try {
+        await logPracticeAttempt(session.access_token, {
+          sessionId,
+          stage: config.stage,
+          level: config.level,
+          questionType: 'QUIZ_GUESS',
+          playedData: targetNote,
+          userAnswer: guess,
+          isCorrect,
+          responseTimeMs
+        });
+      } catch (err) {
+        console.error('[QuizEngine] Failed to log practice attempt:', err);
+      }
+    }
+
+    if (newAttemptsCount >= 10 && session?.access_token && !sessionFinished) {
+      const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+      try {
+        setSessionFinished(true);
+        await finishPracticeSession(session.access_token, sessionId, durationMs);
+        console.log('[QuizEngine] Practice session finished successfully');
+      } catch (err) {
+        console.error('[QuizEngine] Failed to finish practice session:', err);
+      }
+    }
   };
 
   const resetQuiz = () => {
@@ -160,6 +242,11 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
     setSelectedGuess(null);
     setFeedback({ status: 'idle', message: '' });
     setQuizDeck(config.generateDeck());
+    setSessionId(null);
+    setSessionStartTime(null);
+    setAttemptStartTime(null);
+    setSessionFinished(false);
+    initSession();
   };
 
   // Determine standard grid column class
@@ -179,7 +266,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
       <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <button 
-            onClick={onBack}
+            onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -187,7 +274,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
           </button>
           <span className="text-white/20">|</span>
           <button 
-            onClick={onHome}
+            onClick={handleHome}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
             <Home className="w-3.5 h-3.5" />
@@ -208,7 +295,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
           </div>
           {onNext && (
             <button 
-              onClick={onNext}
+              onClick={handleNext}
               className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
             >
               Next Level

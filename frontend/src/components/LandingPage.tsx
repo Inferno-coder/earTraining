@@ -758,8 +758,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                       { level: "Level 4", title: "Dhaivata Recognition (D1 vs D2)", desc: "Differentiate Shuddha Dhaivatam (D1) from Chatusruti Dhaivatam (D2)." },
                       { level: "Level 5", title: "Nishada Recognition (N2 vs N3)", desc: "Differentiate Kaisiki Nishadam (N2) from Kakali Nishadam (N3)." },
                       { level: "Level 6", title: "Mixed Swarasthana Identification", desc: "Classify single target notes randomly played from all 10 swarasthana variations." },
-                      { level: "Level 7", title: "Swarasthana Phrase Dictation", desc: "Reconstruct short melodies containing swarasthana variations note-by-note." },
-                      { level: "Level 8", title: "Advanced Phrase Dictation", desc: "Dictate complex microtonal patterns from memory using 13 active swara keys." }
+                      { level: "Level 7", title: "Advanced Swarasthana Dictation", desc: "Dictate complex microtonal phrases (3 to 7 notes) from memory using 13 active swara keys." }
                     ].map((lvl, i) => (
                       <div key={i} className="flex gap-4 p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl">
                         <span className="h-6 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold shrink-0">{lvl.level}</span>

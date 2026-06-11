@@ -28,7 +28,7 @@ export const s4l1Config: ReconstructionConfig = {
     'Ni': 'B4',
     "Sa'": 'C5'
   },
-  minLength: 1,
+  minLength: 3,
   maxLength: 7,
   defaultLength: 3
 };

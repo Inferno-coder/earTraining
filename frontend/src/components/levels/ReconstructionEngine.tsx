@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, VolumeX, Home } from 'lucide-react';
 import { playNote, startTanpura, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
+import { useAuth } from '../../auth/useAuth';
+import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
 
 const swaraDetailsMap: Record<string, { full: string; note: string; color: string; hoverColor: string; shadow: string }> = {
   'Sa': { full: 'Shadjam', note: 'C4', color: 'bg-rose-500/10 border-rose-500/30 hover:border-rose-400 text-rose-300', hoverColor: 'hover:bg-rose-500/20', shadow: 'shadow-[0_0_15px_rgba(244,63,94,0.3)]' },
@@ -38,6 +40,13 @@ interface ReconstructionEngineProps {
 }
 
 export default function ReconstructionEngine({ config, onBack, onNext, onHome }: ReconstructionEngineProps) {
+  // Auth & API states
+  const { session } = useAuth();
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
+  const [sessionFinished, setSessionFinished] = useState<boolean>(false);
+
   const [sequenceLength, setSequenceLength] = useState<number>(config.defaultLength);
   const [targetSequence, setTargetSequence] = useState<string[]>([]);
   const [userSequence, setUserSequence] = useState<string[]>([]);
@@ -51,6 +60,46 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
   
   const [score, setScore] = useState<number>(0);
   const [attempts, setAttempts] = useState<number>(0);
+
+  const initSession = async () => {
+    if (!session?.access_token) return;
+    try {
+      const sid = await startPracticeSession(session.access_token, config.stage, config.level);
+      setSessionId(sid);
+      setSessionStartTime(Date.now());
+      setSessionFinished(false);
+    } catch (err) {
+      console.error('[ReconstructionEngine] Failed to start reconstruction session:', err);
+    }
+  };
+
+  const endSession = async () => {
+    if (session?.access_token && sessionId && sessionStartTime && !sessionFinished) {
+      const durationMs = Date.now() - sessionStartTime;
+      try {
+        setSessionFinished(true);
+        await finishPracticeSession(session.access_token, sessionId, durationMs);
+        console.log('[ReconstructionEngine] Practice session finished successfully');
+      } catch (err) {
+        console.error('[ReconstructionEngine] Failed to finish reconstruction session:', err);
+      }
+    }
+  };
+
+  const handleBack = async () => {
+    await endSession();
+    onBack();
+  };
+
+  const handleHome = async () => {
+    await endSession();
+    onHome();
+  };
+
+  const handleNext = async () => {
+    await endSession();
+    if (onNext) onNext();
+  };
 
   // Helper to fetch details with fallback
   const getSwaraDetails = (swara: string) => {
@@ -87,7 +136,18 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
   // Sync sequence generation with length changes or config updates
   useEffect(() => {
     startNewRound(sequenceLength);
-  }, [sequenceLength, config]);
+  }, [sequenceLength]);
+
+  // Restart practice session when configuration changes
+  useEffect(() => {
+    setSessionId(null);
+    setSessionStartTime(null);
+    setAttemptStartTime(null);
+    setSessionFinished(false);
+    setScore(0);
+    setAttempts(0);
+    initSession();
+  }, [config]);
 
   // Clean up Tanpura on unmount
   useEffect(() => {
@@ -118,6 +178,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
     setRoundStatus('playing');
     setUserSequence([]);
     setShowAnswer(false);
+    setAttemptStartTime(Date.now());
 
     const { noteDur, delay } = speedSettings[speed];
 
@@ -138,7 +199,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
   // Handle user swara button tap
   const handleTapSwara = async (swara: string) => {
-    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0) return;
+    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || !sessionId) return;
 
     // Play note sound instantly
     const details = getSwaraDetails(swara);
@@ -163,6 +224,26 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
         setRoundStatus('correct');
       } else {
         setRoundStatus('incorrect');
+      }
+
+      const now = Date.now();
+      const responseTimeMs = attemptStartTime ? now - attemptStartTime : null;
+
+      if (session?.access_token) {
+        try {
+          await logPracticeAttempt(session.access_token, {
+            sessionId,
+            stage: config.stage,
+            level: config.level,
+            questionType: 'MELODY_RECONSTRUCTION',
+            playedData: targetSequence,
+            userAnswer: updatedUserSeq,
+            isCorrect,
+            responseTimeMs
+          });
+        } catch (err) {
+          console.error('[ReconstructionEngine] Failed to log reconstruction attempt:', err);
+        }
       }
     }
   };
@@ -210,7 +291,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       <header className="sticky top-0 z-50 glass border-b border-white/5 py-4 px-6 md:px-12 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <button 
-            onClick={onBack}
+            onClick={handleBack}
             className="flex items-center gap-2 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -218,7 +299,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
           </button>
           <span className="text-white/20">|</span>
           <button 
-            onClick={onHome}
+            onClick={handleHome}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group"
           >
             <Home className="w-3.5 h-3.5" />
@@ -239,7 +320,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
           </div>
           {onNext && (
             <button 
-              onClick={onNext}
+              onClick={handleNext}
               className="flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl bg-primary-600 hover:bg-primary-500 text-white transition-colors cursor-pointer shadow-md shadow-primary-600/20"
             >
               Next Level

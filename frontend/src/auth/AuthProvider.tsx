@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, Session, AuthResponse, AuthError } from '@supabase/supabase-js';
@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const initializedUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Get initial session
@@ -43,8 +44,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
         setLoading(false);
 
+        const currentUserId = currentSession?.user?.id || null;
+        if (!currentSession) {
+          initializedUserIdRef.current = null;
+        }
+
         // Auto-initialize local database user profile on session load or login
         if (currentSession && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          if (initializedUserIdRef.current === currentUserId) {
+            return;
+          }
+          initializedUserIdRef.current = currentUserId;
+
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
           try {
             console.log('[AuthProvider]: Initializing local database user profile...');
@@ -59,12 +70,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (!response.ok) {
               const errData = await response.json().catch(() => ({}));
               console.error('[AuthProvider] Failed to sync user profile:', errData.error || response.statusText);
+              initializedUserIdRef.current = null; // Reset on failure to allow retry
             } else {
               const resData = await response.json();
               console.log('[AuthProvider] Local user profile synchronized:', resData);
             }
           } catch (err) {
             console.error('[AuthProvider] Error contacting local backend for profile sync:', err);
+            initializedUserIdRef.current = null; // Reset on error to allow retry
           }
         }
       }
@@ -74,6 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
 
   const signUp = async (email: string, password: string, metadata?: Record<string, any>): Promise<AuthResponse> => {
     return await supabase.auth.signUp({

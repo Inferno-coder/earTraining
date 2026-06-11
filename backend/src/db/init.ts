@@ -5,6 +5,33 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS public.practice_sessions (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    stage INTEGER NOT NULL,
+    level INTEGER NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ,
+    duration_ms INTEGER,
+    total_questions INTEGER,
+    correct_answers INTEGER,
+    accuracy NUMERIC
+);
+
+CREATE TABLE IF NOT EXISTS public.practice_attempts (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.practice_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+    stage INTEGER NOT NULL,
+    level INTEGER NOT NULL,
+    question_type TEXT NOT NULL,
+    played_data JSONB NOT NULL,
+    user_answer JSONB NOT NULL,
+    is_correct BOOLEAN NOT NULL,
+    response_time_ms INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 /**
@@ -27,8 +54,9 @@ export async function initializeDatabase() {
       await pool.query('DROP TABLE IF EXISTS public.user_profiles CASCADE');
     }
 
+    // Run combined schema creation script
     await pool.query(schema);
-    console.log('[Database Init]: user_profiles table is verified and ready.');
+    console.log('[Database Init]: Core backend tables verified and ready.');
   } catch (error: any) {
     console.error('[Database Init Error]: Failed to initialize database tables:', error.message);
   }
