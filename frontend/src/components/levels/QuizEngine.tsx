@@ -494,7 +494,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
 
       {/* Footer */}
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
-        <p>© 2026 SvaraSadhana • Stage {config.stage} Training</p>
+        <p>© 2026 ClearEar Studio • Stage {config.stage} Training</p>
       </footer>
 
       {showTutorial && config.tutorialPopup && (

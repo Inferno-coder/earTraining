@@ -391,7 +391,7 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
 
         {/* Footer */}
         <div className="p-4 bg-slate-950/80 border-t border-white/5 flex justify-between items-center text-[10px] font-mono text-gray-500">
-          <span>SvaraSadhana Custom Practice Lab</span>
+          <span>ClearEar Studio Custom Practice Lab</span>
           <span>Sa = C4 (261.63 Hz)</span>
         </div>
 

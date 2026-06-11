@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Music,
   ArrowRight,
@@ -9,9 +10,13 @@ import {
   BookOpen,
   X,
   Award,
-  Sparkles
+  Sparkles,
+  User,
+  LogOut
 } from 'lucide-react';
 import CustomPracticeModal from './CustomPracticeModal';
+import EditProfileModal from './EditProfileModal';
+import { useAuth } from '../auth/useAuth';
 
 
 type RagaName = 'Mayamalavagowla' | 'Shankarabharanam' | 'Kharaharapriya' | 'Kalyani';
@@ -86,10 +91,45 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onLaunch }: LandingPageProps) {
+  const { signOut, session, user } = useAuth();
+  const navigate = useNavigate();
   const [selectedRaga, setSelectedRaga] = useState<RagaName>('Mayamalavagowla');
   const [showCurriculumModal, setShowCurriculumModal] = useState(false);
   const [showCustomPracticeModal, setShowCustomPracticeModal] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!showProfileDropdown) return;
+    const handleOutsideClick = () => {
+      setShowProfileDropdown(false);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, [showProfileDropdown]);
+
+  const toggleDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowProfileDropdown(prev => !prev);
+  };
+
+  const handleLaunchAcademy = () => {
+    if (!session) {
+      navigate('/login');
+    } else {
+      onLaunch();
+    }
+  };
+
+  const handleCustomPractice = () => {
+    if (!session) {
+      navigate('/login');
+    } else {
+      setShowCustomPracticeModal(true);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-primary-500 selection:text-white">
@@ -106,7 +146,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           </div>
           <div className="text-left">
             <span className="text-xl font-bold bg-gradient-to-r from-white via-primary-100 to-accent-amber bg-clip-text text-transparent tracking-wide">
-              SvaraSadhana
+              ClearEar Studio
             </span>
             <span className="block text-[10px] text-gray-400 font-mono tracking-widest uppercase">Carnatic Music Lab</span>
           </div>
@@ -114,8 +154,6 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
-          <a href="#raga-explorer" className="hover:text-white transition-colors">Raga Scales</a>
-          <a href="#methodology" className="hover:text-white transition-colors">How it Works</a>
           <button
             onClick={() => setShowCurriculumModal(true)}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
@@ -124,7 +162,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             Curriculum
           </button>
           <button
-            onClick={() => setShowCustomPracticeModal(true)}
+            onClick={handleCustomPractice}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
           >
             <Sliders className="w-4 h-4 text-indigo-400" />
@@ -132,13 +170,80 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           </button>
         </nav>
 
-        <div>
+        <div className="flex items-center gap-4">
+          {session && (
+            <span className="hidden sm:inline text-xs font-semibold text-gray-300 font-mono tracking-wide">
+              Welcome, <span className="text-accent-amber font-bold">{user?.user_metadata?.name || user?.email?.split('@')[0]}</span>!
+            </span>
+          )}
           <button
-            onClick={onLaunch}
+            onClick={handleLaunchAcademy}
             className="px-5 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-white transition-all shadow-md shadow-primary-600/20 hover:scale-[1.03] cursor-pointer btn-shimmer"
           >
             Launch Academy
           </button>
+          {session ? (
+            <div className="relative">
+              {/* Profile Avatar Button */}
+              <button
+                onClick={toggleDropdown}
+                className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary-600 to-accent-amber p-0.5 shadow-lg shadow-primary-700/20 hover:scale-[1.05] hover:shadow-primary-500/40 transition-all cursor-pointer flex items-center justify-center border border-white/15"
+              >
+                <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center font-bold text-white uppercase text-sm tracking-wide">
+                  {(user?.user_metadata?.name || user?.email || 'M')[0]}
+                </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showProfileDropdown && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 mt-3 w-64 bg-[#0c101b] border border-white/10 rounded-2xl p-4 shadow-2xl shadow-black/80 z-50 space-y-4 animate-scale-up text-left font-sans"
+                >
+                  {/* User Info Header */}
+                  <div className="space-y-1">
+                    <p className="font-bold text-sm text-white truncate">
+                      {user?.user_metadata?.name || 'Musician'}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                  </div>
+
+                  <hr className="border-white/5" />
+
+                  {/* Actions */}
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        setShowEditProfileModal(true);
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer border-none text-left"
+                    >
+                      <User className="w-3.5 h-3.5 text-primary-400" />
+                      Edit Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        signOut();
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all flex items-center gap-2 cursor-pointer border-none text-left"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-gray-300 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+            >
+              Sign In
+            </button>
+          )}
         </div>
       </header>
 
@@ -161,13 +266,13 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             </h1>
 
             <p className="text-gray-300 text-base md:text-lg max-w-2xl leading-relaxed">
-              SvaraSadhana is a dedicated ear training and vocal pitch recognition laboratory designed for South Indian classical music. Train your mind to identify microtonal intervals, refine your vocal swara precision, and align with the pure resonance of the Tanpura.
+              ClearEar Studio is a dedicated ear training and vocal pitch recognition laboratory designed for South Indian classical music. Train your mind to identify microtonal intervals, refine your vocal swara precision, and align with the pure resonance of the Tanpura.
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4 pt-2">
               <button
-                onClick={onLaunch}
+                onClick={handleLaunchAcademy}
                 className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-extrabold text-white shadow-lg transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-shimmer btn-glow group"
               >
                 Launch Learning Sandbox
@@ -175,7 +280,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               </button>
 
               <button
-                onClick={() => setShowCustomPracticeModal(true)}
+                onClick={handleCustomPractice}
                 className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold border border-white/10 text-white shadow-lg transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-practice-gradient group"
               >
                 <Sliders className="w-4 h-4 group-hover:rotate-45 transition-transform" />
@@ -414,7 +519,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <span className="text-xs font-mono text-primary-400 uppercase tracking-widest font-bold block">Scientific & Systematic Training</span>
             <h2 className="text-3xl md:text-4xl font-extrabold">The Training Journey</h2>
             <p className="text-gray-400 text-sm md:text-base leading-relaxed">
-              Classical ear training takes dedicated structure. SvaraSadhana is built to guide you from foundational pitch matching to advanced melodic contour recognition.
+              Classical ear training takes dedicated structure. ClearEar Studio is built to guide you from foundational pitch matching to advanced melodic contour recognition.
             </p>
           </div>
 
@@ -470,7 +575,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             </p>
             <div className="pt-4 flex justify-center">
               <button
-                onClick={onLaunch}
+                onClick={handleLaunchAcademy}
                 className="flex items-center gap-2 mx-auto px-8 py-4 rounded-xl font-extrabold text-white shadow-xl transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-shimmer btn-glow group"
               >
                 Launch Learning Sandbox
@@ -491,7 +596,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           <button onClick={() => setShowCurriculumModal(true)} className="hover:text-primary-400 transition-colors">Curriculum</button>
           <a href="#" className="hover:text-primary-400 transition-colors flex items-center gap-1 font-sans"><Shield className="w-3.5 h-3.5" /> Privacy</a>
         </div>
-        <p>© 2026 SvaraSadhana. Empowering Indian Classical Music Ear Training.</p>
+        <p>© 2026 ClearEar Studio. Empowering Indian Classical Music Ear Training.</p>
         <p className="text-[10px] text-gray-600">Built using React, Vite, and Tailwind CSS v4.</p>
       </footer>
 
@@ -509,7 +614,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
               <div>
                 <h3 className="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2">
                   <Award className="w-6 h-6 text-accent-amber" />
-                  SvaraSadhana Ear Training Path
+                  ClearEar Studio Ear Training Path
                 </h3>
                 <p className="text-gray-400 text-xs md:text-sm mt-1">
                   A systematic 5-stage training path from absolute pitch basics to Carnatic microtonal mastery.
@@ -673,12 +778,12 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             {/* Footer Launch CTA */}
             <div className="p-4 bg-slate-950/80 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-3">
               <span className="text-[10px] font-mono text-gray-500">
-                SvaraSadhana Ear Training Academy • Version 1.0
+                ClearEar Studio Ear Training Academy • Version 1.0
               </span>
               <button
                 onClick={() => {
                   setShowCurriculumModal(false);
-                  onLaunch();
+                  handleLaunchAcademy();
                 }}
                 className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-500 text-white transition-all shadow-md shadow-primary-600/20 cursor-pointer"
               >
@@ -694,6 +799,12 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
       <CustomPracticeModal
         isOpen={showCustomPracticeModal}
         onClose={() => setShowCustomPracticeModal(false)}
+      />
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
       />
 
     </div>

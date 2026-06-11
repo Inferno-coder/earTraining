@@ -533,7 +533,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
       {/* Footer */}
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
-        <p>© 2026 SvaraSadhana • Stage {config.stage} Dictation</p>
+        <p>© 2026 ClearEar Studio • Stage {config.stage} Dictation</p>
       </footer>
     </div>
   );

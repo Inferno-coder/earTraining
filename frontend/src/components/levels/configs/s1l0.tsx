@@ -294,7 +294,7 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
                 {tourStep === 3 && "🎯 Navigation: Go to Level 1"}
               </h4>
               <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
-                {tourStep === 1 && "Welcome to SvaraSadhana! Start by clicking any white or black key on the keyboard. Hear the synthesized note and see how Western notes match their Carnatic Swaras."}
+                {tourStep === 1 && "Welcome to ClearEar Studio! Start by clicking any white or black key on the keyboard. Hear the synthesized note and see how Western notes match their Carnatic Swaras."}
                 {tourStep === 2 && "Click 'Back to Home' at the top-left to exit this lesson. From the home page, you can access the Custom Practice Room to build your own scales, choose playback speeds, and loop note sequences."}
                 {tourStep === 3 && "Once you have practiced and calibrated your ears, click 'Go to Level 1' in the top-right to start your first pitch discrimination quiz!"}
               </p>
@@ -322,7 +322,7 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
 
       {/* Footer */}
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
-        <p>© 2026 SvaraSadhana • Stage 1 Sandbox</p>
+        <p>© 2026 ClearEar Studio • Stage 1 Sandbox</p>
       </footer>
 
     </div>

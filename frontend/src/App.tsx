@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import { useAuth } from './auth/useAuth';
 import LandingPage from './components/LandingPage';
 import Stage1Level0 from './components/levels/configs/s1l0';
 import QuizEngine from './components/levels/QuizEngine';
@@ -29,7 +33,33 @@ import ReconstructionEngine from './components/levels/ReconstructionEngine';
 type ViewState = 'landing' | 't1' | 's1l0' | 's1l1' | 's1l2' | 't2' | 's2l1' | 's2l2' | 's2l3' | 's2l4' | 's2l5' | 't3' | 's3l1' | 's3l2' | 's3l3' | 't4' | 's4l1' | 't5' | 's5l1' | 's5l2' | 's5l3' | 's5l4' | 's5l5' | 's5l6' | 's5l7' | 's5l8';
 
 function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/*" element={<AppContent />} />
+    </Routes>
+  );
+}
+
+function AppContent() {
+  const { session, loading } = useAuth();
   const [view, setView] = useState<ViewState>('landing');
+
+  if (loading && view !== 'landing') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#05070c] text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-primary-500/20 border-t-primary-500 animate-spin"></div>
+          <p className="text-sm font-mono text-gray-400 uppercase tracking-widest animate-pulse">Loading Academy...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session && view !== 'landing') {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <>
