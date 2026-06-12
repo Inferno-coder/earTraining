@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Volume2 } from 'lucide-react';
 import { playNote } from '../../../utils/audio';
+import LevelSelector from '../LevelSelector';
 
 interface KeyboardKey {
   note: string;
@@ -33,9 +34,10 @@ const blackKeys: KeyboardKey[] = [
 interface Stage1Level0Props {
   onBack: () => void;
   onNext: () => void;
+  onChangeLevel?: (stage: number, level: number) => void;
 }
 
-export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
+export default function Stage1Level0({ onBack, onNext, onChangeLevel }: Stage1Level0Props) {
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [lastPlayedKey, setLastPlayedKey] = useState<KeyboardKey | null>(null);
   const [tourStep, setTourStep] = useState<number>(0);
@@ -118,11 +120,7 @@ export default function Stage1Level0({ onBack, onNext }: Stage1Level0Props) {
           Back to Home
         </button>
         
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-mono text-gray-400">STAGE 1</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-          <span className="text-sm font-bold text-white tracking-wide">Level 0: Pitch Exploration</span>
-        </div>
+        <LevelSelector currentStage={1} currentLevel={0} onChangeLevel={onChangeLevel} />
 
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">

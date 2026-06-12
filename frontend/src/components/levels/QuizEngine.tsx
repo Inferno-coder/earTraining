@@ -4,6 +4,7 @@ import { playNote } from '../../utils/audio';
 import type { QuizConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
 import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
+import LevelSelector from './LevelSelector';
 
 interface KeyboardKey {
   note: string;
@@ -54,11 +55,19 @@ interface QuizEngineProps {
   onBack: () => void;
   onNext?: () => void;
   onHome: () => void;
+  onChangeLevel?: (stage: number, level: number) => void;
 }
 
-export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngineProps) {
+export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLevel }: QuizEngineProps) {
   // Auth & API states
-  const { session, updateProgress } = useAuth();
+  const { session, updateProgress, progress } = useAuth();
+
+  const handleLevelChange = async (stage: number, level: number) => {
+    await endSession();
+    if (onChangeLevel) {
+      onChangeLevel(stage, level);
+    }
+  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
@@ -70,14 +79,11 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
   const [isPlaying, setIsPlaying] = useState(false);
 
   const isNextLevelUnlocked = (): boolean => {
-    return true;
-    /*
     if (!progress) return false;
     const { highest_unlocked_stage, highest_unlocked_level } = progress;
     if (highest_unlocked_stage > config.stage) return true;
     if (highest_unlocked_stage === config.stage && highest_unlocked_level > config.level) return true;
     return false;
-    */
   };
 
   // Game states
@@ -308,11 +314,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-mono text-gray-400">STAGE {config.stage}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></span>
-          <span className="text-sm font-bold text-white tracking-wide">Level {config.level}: {config.title}</span>
-        </div>
+        <LevelSelector currentStage={config.stage} currentLevel={config.level} onChangeLevel={handleLevelChange} />
 
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">

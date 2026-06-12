@@ -64,6 +64,39 @@ function getViewStateForProgress(stage: number, level: number): ViewState {
   return 't1';
 }
 
+function getViewStateForLevelDirect(stage: number, level: number): ViewState {
+  if (stage === 1) {
+    if (level === 0) return 's1l0';
+    if (level === 1) return 's1l1';
+    if (level === 2) return 's1l2';
+  }
+  if (stage === 2) {
+    if (level === 1) return 's2l1';
+    if (level === 2) return 's2l2';
+    if (level === 3) return 's2l3';
+    if (level === 4) return 's2l4';
+    if (level === 5) return 's2l5';
+  }
+  if (stage === 3) {
+    if (level === 1) return 's3l1';
+    if (level === 2) return 's3l2';
+    if (level === 3) return 's3l3';
+  }
+  if (stage === 4) {
+    if (level === 1) return 's4l1';
+  }
+  if (stage === 5) {
+    if (level === 1) return 's5l1';
+    if (level === 2) return 's5l2';
+    if (level === 3) return 's5l3';
+    if (level === 4) return 's5l4';
+    if (level === 5) return 's5l5';
+    if (level === 6) return 's5l6';
+    if (level === 7) return 's5l7';
+  }
+  return 'landing';
+}
+
 function App() {
   return (
     <Routes>
@@ -77,6 +110,10 @@ function App() {
 function AppContent() {
   const { session, loading, progress } = useAuth();
   const [view, setView] = useState<ViewState>('landing');
+
+  const handleChangeLevel = (stage: number, level: number) => {
+    setView(getViewStateForLevelDirect(stage, level));
+  };
 
   if (loading && view !== 'landing') {
     return (
@@ -108,7 +145,7 @@ function AppContent() {
         <StageTransition stage={1} onBegin={() => setView('s1l0')} onHome={() => setView('landing')} />
       )}
       {view === 's1l0' && (
-        <Stage1Level0 onBack={() => setView('landing')} onNext={() => setView('s1l1')} />
+        <Stage1Level0 onBack={() => setView('landing')} onNext={() => setView('s1l1')} onChangeLevel={handleChangeLevel} />
       )}
       {view === 's1l1' && (
         <QuizEngine
@@ -116,6 +153,7 @@ function AppContent() {
           onBack={() => setView('s1l0')}
           onNext={() => setView('s1l2')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's1l2' && (
@@ -124,6 +162,7 @@ function AppContent() {
           onBack={() => setView('s1l1')}
           onNext={() => setView('t2')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 't2' && (
@@ -135,6 +174,7 @@ function AppContent() {
           onBack={() => setView('s1l2')}
           onNext={() => setView('s2l2')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's2l2' && (
@@ -143,6 +183,7 @@ function AppContent() {
           onBack={() => setView('s2l1')}
           onNext={() => setView('s2l3')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's2l3' && (
@@ -151,6 +192,7 @@ function AppContent() {
           onBack={() => setView('s2l2')}
           onNext={() => setView('s2l4')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's2l4' && (
@@ -159,6 +201,7 @@ function AppContent() {
           onBack={() => setView('s2l3')}
           onNext={() => setView('s2l5')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's2l5' && (
@@ -167,6 +210,7 @@ function AppContent() {
           onBack={() => setView('s2l4')}
           onNext={() => setView('t3')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 't3' && (
@@ -178,6 +222,7 @@ function AppContent() {
           onBack={() => setView('s2l5')}
           onNext={() => setView('s3l2')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's3l2' && (
@@ -186,6 +231,7 @@ function AppContent() {
           onBack={() => setView('s3l1')}
           onNext={() => setView('s3l3')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's3l3' && (
@@ -194,6 +240,7 @@ function AppContent() {
           onBack={() => setView('s3l2')}
           onNext={() => setView('t4')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 't4' && (
@@ -205,6 +252,7 @@ function AppContent() {
           onBack={() => setView('s3l3')}
           onNext={() => setView('t5')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 't5' && (
@@ -216,6 +264,7 @@ function AppContent() {
           onBack={() => setView('s4l1')}
           onNext={() => setView('s5l2')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's5l2' && (
@@ -224,6 +273,7 @@ function AppContent() {
           onBack={() => setView('s5l1')}
           onNext={() => setView('s5l3')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's5l3' && (
@@ -232,6 +282,7 @@ function AppContent() {
           onBack={() => setView('s5l2')}
           onNext={() => setView('s5l4')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's5l4' && (
@@ -240,6 +291,7 @@ function AppContent() {
           onBack={() => setView('s5l3')}
           onNext={() => setView('s5l5')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's5l5' && (
@@ -248,6 +300,7 @@ function AppContent() {
           onBack={() => setView('s5l4')}
           onNext={() => setView('s5l6')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's5l6' && (
@@ -256,6 +309,7 @@ function AppContent() {
           onBack={() => setView('s5l5')}
           onNext={() => setView('s5l7')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
       {view === 's5l7' && (
@@ -263,6 +317,7 @@ function AppContent() {
           config={s5l7Config}
           onBack={() => setView('s5l6')}
           onHome={() => setView('landing')}
+          onChangeLevel={handleChangeLevel}
         />
       )}
     </>

@@ -4,6 +4,7 @@ import { playNote, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
 import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
+import LevelSelector from './LevelSelector';
 
 const swaraDetailsMap: Record<string, { full: string; note: string; color: string; hoverColor: string; shadow: string }> = {
   'Sa': { full: 'Shadjam', note: 'C4', color: 'bg-rose-500/10 border-rose-500/30 hover:border-rose-400 text-rose-300', hoverColor: 'hover:bg-rose-500/20', shadow: 'shadow-[0_0_15px_rgba(244,63,94,0.3)]' },
@@ -46,11 +47,19 @@ interface ReconstructionEngineProps {
   onBack: () => void;
   onNext?: () => void;
   onHome: () => void;
+  onChangeLevel?: (stage: number, level: number) => void;
 }
 
-export default function ReconstructionEngine({ config, onBack, onNext, onHome }: ReconstructionEngineProps) {
+export default function ReconstructionEngine({ config, onBack, onNext, onHome, onChangeLevel }: ReconstructionEngineProps) {
   // Auth & API states
   const { session, updateProgress, progress, user } = useAuth();
+
+  const handleLevelChange = async (stage: number, level: number) => {
+    await endSession();
+    if (onChangeLevel) {
+      onChangeLevel(stage, level);
+    }
+  };
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
@@ -448,11 +457,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-mono text-gray-400">STAGE {config.stage}</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-rose animate-pulse"></span>
-          <span className="text-sm font-bold text-white tracking-wide">Level {config.level}: {config.title}</span>
-        </div>
+        <LevelSelector currentStage={config.stage} currentLevel={config.level} onChangeLevel={handleLevelChange} />
 
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
