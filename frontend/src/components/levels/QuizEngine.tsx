@@ -58,7 +58,7 @@ interface QuizEngineProps {
 
 export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngineProps) {
   // Auth & API states
-  const { session, updateProgress, progress } = useAuth();
+  const { session, updateProgress } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
@@ -70,11 +70,14 @@ export default function QuizEngine({ config, onBack, onNext, onHome }: QuizEngin
   const [isPlaying, setIsPlaying] = useState(false);
 
   const isNextLevelUnlocked = (): boolean => {
+    return true;
+    /*
     if (!progress) return false;
     const { highest_unlocked_stage, highest_unlocked_level } = progress;
     if (highest_unlocked_stage > config.stage) return true;
     if (highest_unlocked_stage === config.stage && highest_unlocked_level > config.level) return true;
     return false;
+    */
   };
 
   // Game states

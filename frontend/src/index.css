@@ -241,3 +241,80 @@ body {
   animation: float-up-fade 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
+/* Progress bar pulse glow when gaining XP */
+@keyframes bar-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+.animate-bar-pulse {
+  animation: bar-pulse 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Floating sparkle particles */
+@keyframes sparkle-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(15px) scale(0.3) rotate(0deg);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1) rotate(45deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.5) rotate(180deg);
+  }
+}
+.animate-sparkle-rise {
+  animation: sparkle-rise 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Bouncy XP badge pop-up */
+@keyframes xp-badge-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.1);
+  }
+  35% {
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-15px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.8);
+  }
+}
+.animate-xp-badge-pop {
+  animation: xp-badge-pop 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+

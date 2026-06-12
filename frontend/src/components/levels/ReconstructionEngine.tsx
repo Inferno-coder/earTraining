@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, Home, ChevronRight, Lock, Award } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, Home, ChevronRight, Lock, Award, Sparkles } from 'lucide-react';
 import { playNote, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
@@ -77,9 +77,9 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
   // Set initial state
   const [unlockedLength, setUnlockedLength] = useState<number>(() => {
     if (isOrderedLengthProgression) {
-      if (isLevelCompletedBefore) return 7;
+      if (isLevelCompletedBefore) return config.maxLength;
       const saved = localStorage.getItem(storageKey);
-      return saved ? parseInt(saved, 10) : 3;
+      return saved ? Math.max(parseInt(saved, 10), config.minLength) : config.minLength;
     }
     return config.maxLength;
   });
@@ -99,11 +99,32 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
   const [lengthCompletedThisRound, setLengthCompletedThisRound] = useState<boolean>(false);
   const [showXPGlow, setShowXPGlow] = useState<boolean>(false);
+  const [barPulse, setBarPulse] = useState<boolean>(false);
+  const [sparkles, setSparkles] = useState<{ id: number; left: number; delay: number }[]>([]);
+
+  const triggerXPEffects = () => {
+    // 1. Pulse progress bar container
+    setBarPulse(true);
+    setTimeout(() => setBarPulse(false), 550);
+
+    // 2. Generate rising sparkles
+    const newSparkles = Array.from({ length: 10 }).map((_, i) => ({
+      id: Date.now() + i + Math.random(),
+      left: Math.random() * 80 + 10, // 10% to 90% width
+      delay: Math.random() * 350
+    }));
+    setSparkles(newSparkles);
+    setTimeout(() => setSparkles([]), 1500);
+
+    // 3. Show floating XP pop-up badge
+    setShowXPGlow(true);
+    setTimeout(() => setShowXPGlow(false), 1800);
+  };
 
   // Sync unlocked length if level becomes completed before
   useEffect(() => {
     if (isOrderedLengthProgression && isLevelCompletedBefore) {
-      setUnlockedLength(7);
+      setUnlockedLength(config.maxLength);
     }
   }, [isLevelCompletedBefore, config]);
 
@@ -111,7 +132,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
     if (isOrderedLengthProgression) {
       if (isLevelCompletedBefore) return config.defaultLength;
       const saved = localStorage.getItem(storageKey);
-      return saved ? parseInt(saved, 10) : config.defaultLength;
+      return saved ? Math.max(parseInt(saved, 10), config.minLength) : config.defaultLength;
     }
     return config.defaultLength;
   });
@@ -286,8 +307,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
         if (isOrderedLengthProgression && !isLevelCompletedBefore) {
           nextLengthXP = lengthXP + 10;
           saveLengthXP(nextLengthXP);
-          setShowXPGlow(true);
-          setTimeout(() => setShowXPGlow(false), 1200);
+          triggerXPEffects();
         }
       } else {
         setRoundStatus('incorrect');
@@ -316,12 +336,12 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       if (isOrderedLengthProgression && !isLevelCompletedBefore) {
         if (isCorrect && nextLengthXP >= 100) {
           const nextLen = sequenceLength + 1;
-          if (nextLen <= 7) {
+          if (nextLen <= config.maxLength) {
             setUnlockedLength(nextLen);
             localStorage.setItem(storageKey, nextLen.toString());
             setLengthCompletedThisRound(true);
           } else {
-            // Completed length 7! Finish session.
+            // Completed maximum length! Finish session.
             if (session?.access_token && !sessionFinished) {
               const durationMs = sessionStartTime ? now - sessionStartTime : 0;
               try {
@@ -512,15 +532,14 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                           key={len}
                           disabled={!isUnlocked || isPlaying}
                           onClick={() => setSequenceLength(len)}
-                          className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 relative cursor-pointer ${
-                            isCurrent
-                              ? 'bg-gradient-to-tr from-primary-600 via-primary-700 to-accent-rose text-white shadow-md shadow-primary-700/30 scale-105'
-                              : isCompleted
+                          className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 relative cursor-pointer ${isCurrent
+                            ? 'bg-gradient-to-tr from-primary-600 via-primary-700 to-accent-rose text-white shadow-md shadow-primary-700/30 scale-105'
+                            : isCompleted
                               ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
                               : isUnlocked
-                              ? 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10'
-                              : 'bg-slate-950/60 border-white/5 text-gray-600 cursor-not-allowed opacity-50'
-                          }`}
+                                ? 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10'
+                                : 'bg-slate-950/60 border-white/5 text-gray-600 cursor-not-allowed opacity-50'
+                            }`}
                         >
                           <span>{len}</span>
                           {!isUnlocked && (
@@ -538,19 +557,49 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                 {/* XP Progress Bar */}
                 <div className="space-y-2 pt-1 relative text-left">
                   <div className="flex justify-between items-center text-[10px] font-mono">
-                    <span className="text-gray-400 uppercase tracking-wider">Length {sequenceLength} Mastery</span>
-                    <span className="text-white font-bold">{lengthXP} / 100 XP</span>
+                    <span className="text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-400" />
+                      Length {sequenceLength} Mastery
+                    </span>
+                    <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shadow-sm">
+                      {lengthXP} / 100 XP
+                    </span>
                   </div>
 
-                  <div className="w-full h-3.5 bg-slate-950/80 rounded-full border border-white/5 p-0.5 overflow-hidden relative shadow-inner">
+                  <div className="relative">
+                    {/* Floating Sparkles rising from the bar */}
+                    {sparkles.map((sp) => (
+                      <div
+                        key={sp.id}
+                        className="absolute bottom-2 text-emerald-400 animate-sparkle-rise pointer-events-none z-10"
+                        style={{
+                          left: `${sp.left}%`,
+                          animationDelay: `${sp.delay}ms`,
+                        }}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20" />
+                      </div>
+                    ))}
+
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-accent-rose transition-all duration-500 ease-out animate-shimmer-bar"
-                      style={{ width: `${Math.min((lengthXP / 100) * 100, 100)}%` }}
-                    />
+                      className={`w-full h-3.5 bg-slate-950/80 rounded-full border border-white/5 p-0.5 relative shadow-inner transition-all duration-300 ${
+                        barPulse ? 'ring-2 ring-emerald-500/50 scale-[1.02] shadow-[0_0_15px_rgba(16,185,129,0.3)]' : ''
+                      }`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 transition-all duration-500 ease-out animate-shimmer-bar relative"
+                        style={{ width: `${Math.min((lengthXP / 100) * 100, 100)}%` }}
+                      >
+                        {/* Glow tip at the end of progress */}
+                        {lengthXP > 0 && (
+                          <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#fff,0_0_15px_#10b981] animate-pulse" />
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {showXPGlow && (
-                    <div className="absolute -top-3 right-0 text-[10px] text-green-400 font-mono font-bold animate-float-up-fade">
+                    <div className="absolute -top-3 right-0 text-[10px] text-emerald-400 font-mono font-bold animate-float-up-fade">
                       +10 XP
                     </div>
                   )}
@@ -813,10 +862,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                         setCompletionResponse(null);
                         if (isOrderedLengthProgression && !isLevelCompletedBefore) {
                           saveLengthXP(0);
-                          setUnlockedLength(3);
-                          localStorage.setItem(storageKey, '3');
-                          setSequenceLength(3);
-                          startNewRound(3);
+                          setUnlockedLength(config.minLength);
+                          localStorage.setItem(storageKey, config.minLength.toString());
+                          setSequenceLength(config.minLength);
+                          startNewRound(config.minLength);
                         } else {
                           startNewRound(sequenceLength);
                         }
@@ -915,6 +964,20 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
         <p>© 2026 ClearEar Studio • Stage {config.stage} Dictation</p>
       </footer>
+
+      {/* Premium Floating XP Pop-up Badge */}
+      {showXPGlow && (
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[80] pointer-events-none animate-xp-badge-pop">
+          <div className="flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-500 text-white font-extrabold text-sm px-6 py-3 rounded-full border border-emerald-400/30 shadow-2xl shadow-emerald-500/40 backdrop-blur-md">
+            <Sparkles className="w-4 h-4 text-amber-300 animate-spin-slow fill-amber-300/20" />
+            <span className="tracking-wide text-xs uppercase font-mono">Mastery XP</span>
+            <span className="font-mono text-base font-black bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/20 shadow-inner">
+              +10 XP
+            </span>
+            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse animate-spin-slow" />
+          </div>
+        </div>
+      )}
 
       {/* Length Completion Modal */}
       {lengthCompletedThisRound && (
