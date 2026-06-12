@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, VolumeX, Home, ChevronRight, Lock } from 'lucide-react';
-import { playNote, startTanpura, stopTanpura } from '../../utils/audio';
+import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, Home, ChevronRight, Lock, Award } from 'lucide-react';
+import { playNote, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
 import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
@@ -50,7 +50,7 @@ interface ReconstructionEngineProps {
 
 export default function ReconstructionEngine({ config, onBack, onNext, onHome }: ReconstructionEngineProps) {
   // Auth & API states
-  const { session, updateProgress, progress } = useAuth();
+  const { session, updateProgress, progress, user } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
@@ -65,14 +65,62 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
     return false;
   };
 
-  const [sequenceLength, setSequenceLength] = useState<number>(config.defaultLength);
+  const isOrderedLengthProgression = config.stage === 4 && config.level === 1;
+  const isLevelCompletedBefore = progress && (
+    progress.highest_unlocked_stage > config.stage ||
+    (progress.highest_unlocked_stage === config.stage && progress.highest_unlocked_level > config.level)
+  ) ? true : false;
+
+  const storageKey = `earTraining_s4l1_unlocked_length_u${user?.id || 'anonymous'}`;
+  const xpStorageKey = `earTraining_s4l1_length_xp_u${user?.id || 'anonymous'}`;
+
+  // Set initial state
+  const [unlockedLength, setUnlockedLength] = useState<number>(() => {
+    if (isOrderedLengthProgression) {
+      if (isLevelCompletedBefore) return 7;
+      const saved = localStorage.getItem(storageKey);
+      return saved ? parseInt(saved, 10) : 3;
+    }
+    return config.maxLength;
+  });
+
+  const [lengthXP, setLengthXP] = useState<number>(() => {
+    if (isOrderedLengthProgression) {
+      const saved = localStorage.getItem(xpStorageKey);
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
+
+  const saveLengthXP = (xp: number) => {
+    setLengthXP(xp);
+    localStorage.setItem(xpStorageKey, xp.toString());
+  };
+
+  const [lengthCompletedThisRound, setLengthCompletedThisRound] = useState<boolean>(false);
+  const [showXPGlow, setShowXPGlow] = useState<boolean>(false);
+
+  // Sync unlocked length if level becomes completed before
+  useEffect(() => {
+    if (isOrderedLengthProgression && isLevelCompletedBefore) {
+      setUnlockedLength(7);
+    }
+  }, [isLevelCompletedBefore, config]);
+
+  const [sequenceLength, setSequenceLength] = useState<number>(() => {
+    if (isOrderedLengthProgression) {
+      if (isLevelCompletedBefore) return config.defaultLength;
+      const saved = localStorage.getItem(storageKey);
+      return saved ? parseInt(saved, 10) : config.defaultLength;
+    }
+    return config.defaultLength;
+  });
   const [targetSequence, setTargetSequence] = useState<string[]>([]);
   const [userSequence, setUserSequence] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackActiveIndex, setPlaybackActiveIndex] = useState<number | null>(null);
   const [speed, setSpeed] = useState<'slow' | 'medium' | 'fast'>('medium');
 
-  const [tanpuraActive, setTanpuraActive] = useState<boolean>(false);
   const [roundStatus, setRoundStatus] = useState<'idle' | 'playing' | 'entering' | 'correct' | 'incorrect'>('idle');
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
 
@@ -177,25 +225,12 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
     };
   }, []);
 
-  // Toggle Tanpura drone
-  const handleToggleTanpura = async () => {
-    if (tanpuraActive) {
-      stopTanpura();
-      setTanpuraActive(false);
-    } else {
-      try {
-        await startTanpura(261.63);
-        setTanpuraActive(true);
-      } catch (err) {
-        console.error('Failed to start Tanpura drone:', err);
-      }
-    }
-  };
 
   // Play target sequence melody
   const handlePlaySequence = async () => {
     const totalRounds = getReconstructionTotalQuestions(sequenceLength);
-    if (isPlaying || targetSequence.length === 0 || attempts >= totalRounds) return;
+    const isFinished = isOrderedLengthProgression && !isLevelCompletedBefore ? !!completionResponse : attempts >= totalRounds;
+    if (isPlaying || targetSequence.length === 0 || isFinished) return;
     setIsPlaying(true);
     setRoundStatus('playing');
     setUserSequence([]);
@@ -222,7 +257,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
   // Handle user swara button tap
   const handleTapSwara = async (swara: string) => {
     const totalRounds = getReconstructionTotalQuestions(sequenceLength);
-    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || !sessionId || attempts >= totalRounds) return;
+    const isFinished = isOrderedLengthProgression && !isLevelCompletedBefore ? !!completionResponse : attempts >= totalRounds;
+    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || !sessionId || isFinished) return;
 
     // Play note sound instantly
     const details = getSwaraDetails(swara);
@@ -243,9 +279,16 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
       const newAttemptsCount = attempts + 1;
       setAttempts(newAttemptsCount);
+      let nextLengthXP = lengthXP;
       if (isCorrect) {
         setScore(prev => prev + 1);
         setRoundStatus('correct');
+        if (isOrderedLengthProgression && !isLevelCompletedBefore) {
+          nextLengthXP = lengthXP + 10;
+          saveLengthXP(nextLengthXP);
+          setShowXPGlow(true);
+          setTimeout(() => setShowXPGlow(false), 1200);
+        }
       } else {
         setRoundStatus('incorrect');
       }
@@ -270,28 +313,58 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
         }
       }
 
-      // Finish session automatically if rounds are complete
-      if (newAttemptsCount >= totalRounds && session?.access_token && !sessionFinished) {
-        const durationMs = sessionStartTime ? now - sessionStartTime : 0;
-        try {
-          setSessionFinished(true);
-          const finalScore = isCorrect ? score + 1 : score;
-          const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
-          console.log('[ReconstructionEngine] Practice session finished successfully');
-          if (res && res.progress) {
-            updateProgress(res.progress);
+      if (isOrderedLengthProgression && !isLevelCompletedBefore) {
+        if (isCorrect && nextLengthXP >= 100) {
+          const nextLen = sequenceLength + 1;
+          if (nextLen <= 7) {
+            setUnlockedLength(nextLen);
+            localStorage.setItem(storageKey, nextLen.toString());
+            setLengthCompletedThisRound(true);
+          } else {
+            // Completed length 7! Finish session.
+            if (session?.access_token && !sessionFinished) {
+              const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+              try {
+                setSessionFinished(true);
+                const finalScore = isCorrect ? score + 1 : score;
+                const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
+                console.log('[ReconstructionEngine] Practice session finished successfully');
+                if (res && res.progress) {
+                  updateProgress(res.progress);
+                }
+                setCompletionResponse({
+                  pass: res.pass,
+                  xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
+                });
+              } catch (err) {
+                console.error('[ReconstructionEngine] Failed to finish practice session:', err);
+              }
+            }
           }
-          setCompletionResponse({
-            pass: res.pass,
-            xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
-          });
-        } catch (err) {
-          console.error('[ReconstructionEngine] Failed to finish practice session:', err);
+        }
+      } else {
+        // Finish session automatically if rounds are complete
+        if (newAttemptsCount >= totalRounds && session?.access_token && !sessionFinished) {
+          const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+          try {
+            setSessionFinished(true);
+            const finalScore = isCorrect ? score + 1 : score;
+            const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
+            console.log('[ReconstructionEngine] Practice session finished successfully');
+            if (res && res.progress) {
+              updateProgress(res.progress);
+            }
+            setCompletionResponse({
+              pass: res.pass,
+              xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
+            });
+          } catch (err) {
+            console.error('[ReconstructionEngine] Failed to finish practice session:', err);
+          }
         }
       }
     }
   };
-
   // Undo last note
   const handleUndo = () => {
     if (userSequence.length > 0 && roundStatus === 'entering') {
@@ -324,6 +397,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
     config.swaraButtons.length <= 8
       ? 'grid-cols-4 md:grid-cols-8'
       : 'grid-cols-4 md:grid-cols-7 lg:grid-cols-13';
+
+  const isLevelFinished = isOrderedLengthProgression && !isLevelCompletedBefore
+    ? !!completionResponse
+    : (attempts >= getReconstructionTotalQuestions(sequenceLength) || !!completionResponse);
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative overflow-x-hidden selection:bg-primary-500 selection:text-white">
@@ -406,94 +483,178 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
           <div className="lg:col-span-4 flex flex-col gap-6">
 
             {/* Sequence Length Selector Card */}
-            {lengths.length > 1 && (
-              <div className="glass rounded-3xl p-5 border-white/5 space-y-4 flex flex-col justify-between">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block">Difficulty Configuration</span>
-                  <h3 className="text-sm font-bold text-white">Sequence Length</h3>
+            {/* Difficulty & Speed Settings Card */}
+            {isOrderedLengthProgression && !isLevelCompletedBefore ? (
+              <div className="glass rounded-3xl p-5 border-white/5 space-y-5 flex flex-col justify-between relative overflow-hidden">
+                {/* Background glow behind active settings */}
+                <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-primary-500/10 filter blur-xl animate-pulse-slow"></div>
+
+                <div className="space-y-1 text-left">
+                  <span className="text-[10px] font-mono text-primary-400 uppercase tracking-widest font-bold block">Ordered Progression</span>
+                  <h3 className="text-sm font-bold text-white">Dictation Settings</h3>
+                  <p className="text-[10px] text-gray-400 leading-tight">Master note sequences from 3 to 7 in order.</p>
                 </div>
 
-                <div className="flex bg-black/30 p-1 rounded-2xl border border-white/5 gap-1 overflow-x-auto">
-                  {lengths.map((len) => {
-                    const isActive = sequenceLength === len;
-                    return (
-                      <button
-                        key={len}
-                        disabled={isPlaying}
-                        onClick={() => setSequenceLength(len)}
-                        className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer ${isActive
-                          ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-md shadow-primary-700/30'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                {/* Sequence Length Steps */}
+                <div className="space-y-2 text-left">
+                  <div className="flex justify-between items-center text-[10px] font-mono text-gray-400">
+                    <span>Active Length</span>
+                    <span className="text-white font-bold">{sequenceLength} Notes</span>
+                  </div>
+                  <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5 gap-1 overflow-x-auto">
+                    {lengths.map((len) => {
+                      const isCurrent = sequenceLength === len;
+                      const isUnlocked = len <= unlockedLength;
+                      const isCompleted = len < unlockedLength;
+
+                      return (
+                        <button
+                          key={len}
+                          disabled={!isUnlocked || isPlaying}
+                          onClick={() => setSequenceLength(len)}
+                          className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 relative cursor-pointer ${
+                            isCurrent
+                              ? 'bg-gradient-to-tr from-primary-600 via-primary-700 to-accent-rose text-white shadow-md shadow-primary-700/30 scale-105'
+                              : isCompleted
+                              ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                              : isUnlocked
+                              ? 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10'
+                              : 'bg-slate-950/60 border-white/5 text-gray-600 cursor-not-allowed opacity-50'
                           }`}
-                      >
-                        {len}
-                      </button>
-                    );
-                  })}
+                        >
+                          <span>{len}</span>
+                          {!isUnlocked && (
+                            <Lock className="w-2 h-2 text-amber-500 absolute top-0.5 right-0.5" />
+                          )}
+                          {isCompleted && (
+                            <span className="w-1 h-1 rounded-full bg-emerald-400 absolute bottom-1"></span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <p className="text-[10px] text-gray-400 font-mono italic">
+                {/* XP Progress Bar */}
+                <div className="space-y-2 pt-1 relative text-left">
+                  <div className="flex justify-between items-center text-[10px] font-mono">
+                    <span className="text-gray-400 uppercase tracking-wider">Length {sequenceLength} Mastery</span>
+                    <span className="text-white font-bold">{lengthXP} / 100 XP</span>
+                  </div>
+
+                  <div className="w-full h-3.5 bg-slate-950/80 rounded-full border border-white/5 p-0.5 overflow-hidden relative shadow-inner">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-accent-rose transition-all duration-500 ease-out animate-shimmer-bar"
+                      style={{ width: `${Math.min((lengthXP / 100) * 100, 100)}%` }}
+                    />
+                  </div>
+
+                  {showXPGlow && (
+                    <div className="absolute -top-3 right-0 text-[10px] text-green-400 font-mono font-bold animate-float-up-fade">
+                      +10 XP
+                    </div>
+                  )}
+                </div>
+
+                {/* Playback Tempo Switch */}
+                <div className="space-y-2 pt-3 border-t border-white/5 text-left">
+                  <h4 className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Playback Tempo</h4>
+                  <div className="flex bg-black/35 p-1 rounded-2xl border border-white/5 gap-1">
+                    {(['slow', 'medium', 'fast'] as const).map((s) => {
+                      const isActive = speed === s;
+                      return (
+                        <button
+                          key={s}
+                          disabled={isPlaying}
+                          onClick={() => setSpeed(s)}
+                          className={`flex-1 py-2 text-[10px] font-mono font-bold rounded-xl uppercase tracking-wider transition-all cursor-pointer ${isActive
+                            ? 'bg-gradient-to-tr from-primary-600 via-primary-700 to-accent-rose text-white shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+
+              </div>
+            ) : (
+              /* Normal Configuration Card */
+              <div className="glass rounded-3xl p-5 border-white/5 space-y-5 flex flex-col justify-between">
+                <div className="space-y-1 text-left">
+                  <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block">Difficulty Configuration</span>
+                  <h3 className="text-sm font-bold text-white">Sequence Settings</h3>
+                </div>
+
+                {/* Sequence Length Selection */}
+                {lengths.length > 1 && (
+                  <div className="space-y-2 text-left">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-gray-400">
+                      <span>Sequence Length</span>
+                      <span className="text-white font-bold">{sequenceLength} Notes</span>
+                    </div>
+                    <div className="flex bg-black/30 p-1 rounded-2xl border border-white/5 gap-1 overflow-x-auto">
+                      {lengths.map((len) => {
+                        const isActive = sequenceLength === len;
+                        return (
+                          <button
+                            key={len}
+                            disabled={isPlaying}
+                            onClick={() => setSequenceLength(len)}
+                            className={`w-9 h-9 text-xs rounded-xl font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer ${isActive
+                              ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-md shadow-primary-700/30'
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                              }`}
+                          >
+                            {len}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Playback Tempo Switch */}
+                <div className="space-y-2 pt-3 border-t border-white/5 text-left">
+                  <h4 className="text-[10px] font-mono text-gray-400 uppercase tracking-wider">Playback Tempo</h4>
+                  <div className="flex bg-black/35 p-1 rounded-2xl border border-white/5 gap-1">
+                    {(['slow', 'medium', 'fast'] as const).map((s) => {
+                      const isActive = speed === s;
+                      return (
+                        <button
+                          key={s}
+                          disabled={isPlaying}
+                          onClick={() => setSpeed(s)}
+                          className={`flex-1 py-2 text-[10px] font-mono font-bold rounded-xl uppercase tracking-wider transition-all cursor-pointer ${isActive
+                            ? 'bg-gradient-to-tr from-primary-600 via-primary-700 to-accent-rose text-white shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Session Score Row */}
+                {!isOrderedLengthProgression && (
+                  <div className="flex justify-between items-center pt-3 border-t border-white/5 text-left">
+                    <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">Session Score</span>
+                    <div className="bg-white/5 border border-white/10 px-3 py-1 rounded-xl text-xs font-mono text-gray-300">
+                      Correct: <strong className="text-white">{score}</strong> / {attempts}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-gray-400 font-mono italic pt-1 border-t border-white/5 text-left">
                   💡 Target plays {sequenceLength} random notes.
                 </p>
               </div>
             )}
-
-            {/* Tanpura & Scoreboard Card */}
-            <div className="glass rounded-3xl p-5 border-white/5 flex flex-col justify-between space-y-4">
-
-              {/* Tanpura Control */}
-              <div className="flex justify-between items-center">
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1">
-                    🪕 Tanpura Drone
-                  </h4>
-                  <span className="text-[9px] text-gray-400 font-mono">Ambient drone in C4</span>
-                </div>
-                <button
-                  onClick={handleToggleTanpura}
-                  className={`px-3 py-1.5 text-[10px] font-mono font-bold rounded-xl border transition-all cursor-pointer flex items-center gap-1 ${tanpuraActive
-                    ? 'bg-accent-amber/20 border-accent-amber/40 text-accent-amber'
-                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
-                    }`}
-                >
-                  {tanpuraActive ? <Volume2 className="w-3.5 h-3.5 text-accent-amber animate-pulse" /> : <VolumeX className="w-3.5 h-3.5" />}
-                  {tanpuraActive ? 'ON' : 'OFF'}
-                </button>
-              </div>
-
-              {/* Playback Speed Switch */}
-              <div className="space-y-2 pt-3 border-t border-white/5">
-                <h4 className="text-xs font-bold text-white">Playback Speed</h4>
-                <div className="flex bg-black/30 p-0.5 rounded-xl border border-white/5 gap-1">
-                  {(['slow', 'medium', 'fast'] as const).map((s) => {
-                    const isActive = speed === s;
-                    return (
-                      <button
-                        key={s}
-                        disabled={isPlaying}
-                        onClick={() => setSpeed(s)}
-                        className={`flex-1 py-1 text-[9px] font-mono font-bold rounded-lg uppercase tracking-wider transition-all cursor-pointer ${isActive
-                          ? 'bg-gradient-to-tr from-primary-600 to-accent-rose text-white shadow-sm'
-                          : 'text-gray-400 hover:text-white'
-                          }`}
-                      >
-                        {s}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="h-px bg-white/5"></div>
-
-              {/* Scoreboard */}
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-300 font-medium">Session Score</span>
-                <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs font-mono text-gray-300">
-                  Correct: <strong className="text-white text-sm">{score}</strong> / {attempts}
-                </div>
-              </div>
-            </div>
 
           </div>
 
@@ -581,8 +742,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
               <div className={`grid ${keypadColClass} gap-2`}>
                 {config.swaraButtons.map((swara) => {
                   const details = getSwaraDetails(swara);
-                  const totalRounds = getReconstructionTotalQuestions(sequenceLength);
-                  const isDisabled = isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || attempts >= totalRounds;
+                  const isDisabled = isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || isLevelFinished;
                   return (
                     <button
                       key={swara}
@@ -604,11 +764,19 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
 
             {/* Bottom Actions */}
             <div className="flex flex-col space-y-4 pt-4 border-t border-white/5 w-full">
-              {attempts >= getReconstructionTotalQuestions(sequenceLength) ? (
-                <div className="p-4 bg-primary-950/40 border border-primary-500/30 rounded-xl space-y-3 w-full">
+              {isLevelFinished ? (
+                <div className="p-4 bg-primary-950/40 border border-primary-500/30 rounded-xl space-y-3 w-full animate-fade-in-up">
                   <p className="text-sm font-bold text-white text-center">🏁 Level Complete!</p>
                   <p className="text-xs text-gray-300 text-center">
-                    You scored <strong className="text-white text-sm">{score}</strong> out of {getReconstructionTotalQuestions(sequenceLength)} rounds ({Math.round((score / getReconstructionTotalQuestions(sequenceLength)) * 100)}%).
+                    {isOrderedLengthProgression && !isLevelCompletedBefore ? (
+                      <>
+                        You completed all sequence levels in <strong className="text-white text-sm">{attempts}</strong> attempts with a final accuracy of <strong className="text-white text-sm">{attempts > 0 ? Math.round((score / attempts) * 100) : 0}%</strong>.
+                      </>
+                    ) : (
+                      <>
+                        You scored <strong className="text-white text-sm">{score}</strong> out of {getReconstructionTotalQuestions(sequenceLength)} rounds ({Math.round((score / getReconstructionTotalQuestions(sequenceLength)) * 100)}%).
+                      </>
+                    )}
                   </p>
 
                   {completionResponse && (
@@ -643,7 +811,15 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
                         setSessionStartTime(null);
                         setSessionFinished(false);
                         setCompletionResponse(null);
-                        startNewRound(sequenceLength);
+                        if (isOrderedLengthProgression && !isLevelCompletedBefore) {
+                          saveLengthXP(0);
+                          setUnlockedLength(3);
+                          localStorage.setItem(storageKey, '3');
+                          setSequenceLength(3);
+                          startNewRound(3);
+                        } else {
+                          startNewRound(sequenceLength);
+                        }
                         initSession();
                       }}
                       className="flex-1 py-2.5 rounded-xl font-bold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
@@ -739,6 +915,43 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome }:
       <footer className="glass border-t border-white/5 py-6 mt-12 text-center text-xs text-gray-500 px-6">
         <p>© 2026 ClearEar Studio • Stage {config.stage} Dictation</p>
       </footer>
+
+      {/* Length Completion Modal */}
+      {lengthCompletedThisRound && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md p-6 text-center space-y-6 shadow-2xl animate-fade-in-up">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 mx-auto shadow-inner animate-bounce">
+              <Award className="w-8 h-8 text-emerald-400" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-extrabold text-white">🎉 Length {sequenceLength} Mastered!</h3>
+              <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+                You have successfully gained 100 XP and demonstrated pitch perfect recall on {sequenceLength}-note patterns.
+              </p>
+            </div>
+
+            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl flex justify-between items-center">
+              <span className="text-xs text-gray-400 font-mono uppercase tracking-wider">Mastery Bonus</span>
+              <span className="text-sm font-mono font-bold text-emerald-400">+100 XP</span>
+            </div>
+
+            <button
+              onClick={() => {
+                setLengthCompletedThisRound(false);
+                saveLengthXP(0);
+                const nextLen = sequenceLength + 1;
+                setSequenceLength(nextLen);
+                startNewRound(nextLen);
+              }}
+              className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white flex items-center justify-center gap-1.5 transition-all text-sm cursor-pointer shadow-lg shadow-emerald-500/20"
+            >
+              Unlock & Proceed to Length {sequenceLength + 1}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

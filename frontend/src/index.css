@@ -203,3 +203,41 @@ body {
 .btn-glow {
   animation: glow-breath 6s infinite ease-in-out;
 }
+
+/* Custom progress bar shimmer animation */
+@keyframes shimmer-bar {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.animate-shimmer-bar {
+  background-size: 200% 100%;
+  animation: shimmer-bar 1.5s infinite linear;
+}
+
+/* Floating XP indicators */
+@keyframes float-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+.animate-float-up-fade {
+  animation: float-up-fade 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
