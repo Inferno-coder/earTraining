@@ -110,8 +110,9 @@ export class UserProgressService {
     // 2. Evaluate if level passed
     const pass = checkLevelPass(totalQuestions, correctAnswers);
 
-    // 3. Compute XP gained
-    const xpGained = (correctAnswers * 10) + (pass ? 50 : 0);
+    // 3. Compute XP gained (Only for Reconstruction levels: Stage 4 Level 1 and Stage 5 Level 7)
+    const isReconstructionLevel = (stage === 4 && level === 1) || (stage === 5 && level === 7);
+    const xpGained = isReconstructionLevel ? (correctAnswers * 10) + (pass ? 50 : 0) : 0;
 
     // 4. Copy state to avoid mutations
     const updated: UserProgress = {

@@ -594,13 +594,11 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
                           {completionResponse.pass ? (
                             <>
                               <p className="font-bold text-sm">🎉 Level Passed!</p>
-                              <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
                               <p className="text-[10px] text-green-300 mt-0.5">Next Level Unlocked!</p>
                             </>
                           ) : (
                             <>
                               <p className="font-bold text-sm">❌ Level Failed</p>
-                              <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
                               <p className="text-[10px] text-red-300 mt-0.5">
                                 Scored {score} correct (requires {(quizDeck.length || 10) >= 25 ? 20 : (quizDeck.length || 10) >= 20 ? 16 : (quizDeck.length || 10) >= 15 ? 12 : 8} to unlock next level)
                               </p>
