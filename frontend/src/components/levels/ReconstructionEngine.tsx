@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, Home, ChevronRight, Lock, Award, Sparkles } from 'lucide-react';
 import { playNote, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
-import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
+import { startPracticeSession, logPracticeAttempt, finishPracticeSession, saveReconstructionProgress } from '../../lib/api';
 import LevelSelector from './LevelSelector';
 
 const swaraDetailsMap: Record<string, { full: string; note: string; color: string; hoverColor: string; shadow: string }> = {
@@ -52,7 +52,7 @@ interface ReconstructionEngineProps {
 
 export default function ReconstructionEngine({ config, onBack, onNext, onHome, onChangeLevel }: ReconstructionEngineProps) {
   // Auth & API states
-  const { session, updateProgress, progress, user } = useAuth();
+  const { session, updateProgress, progress } = useAuth();
 
   const handleLevelChange = async (stage: number, level: number) => {
     await endSession();
@@ -80,30 +80,77 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     (progress.highest_unlocked_stage === config.stage && progress.highest_unlocked_level > config.level)
   ) ? true : false;
 
-  const storageKey = `earTraining_s${config.stage}l${config.level}_unlocked_length_u${user?.id || 'anonymous'}`;
-  const xpStorageKey = `earTraining_s${config.stage}l${config.level}_length_xp_u${user?.id || 'anonymous'}`;
+  const levelKey = `s${config.stage}l${config.level}`;
 
   // Set initial state
-  const [unlockedLength, setUnlockedLength] = useState<number>(() => {
+  const isInitializedRef = useRef<boolean>(false);
+
+  // Set initial state
+  const [unlockedLength, setUnlockedLengthState] = useState<number>(() => {
     if (isOrderedLengthProgression) {
       if (isLevelCompletedBefore) return config.maxLength;
-      const saved = localStorage.getItem(storageKey);
-      return saved ? Math.max(parseInt(saved, 10), config.minLength) : config.minLength;
+      const backendVal = progress?.reconstruction_states?.[levelKey]?.unlocked_length;
+      if (backendVal !== undefined) return backendVal;
+      return config.minLength;
     }
     return config.maxLength;
   });
 
-  const [lengthXP, setLengthXP] = useState<number>(() => {
+  const [lengthXP, setLengthXPState] = useState<number>(() => {
     if (isOrderedLengthProgression) {
-      const saved = localStorage.getItem(xpStorageKey);
-      return saved ? parseInt(saved, 10) : 0;
+      const backendVal = progress?.reconstruction_states?.[levelKey]?.length_xp;
+      if (backendVal !== undefined) return backendVal;
+      return 0;
     }
     return 0;
   });
 
+  // Reset initialization ref if level key changes
+  useEffect(() => {
+    isInitializedRef.current = false;
+  }, [levelKey]);
+
+  // Sync state if progress loads/changes from backend (only on initial load)
+  useEffect(() => {
+    if (progress && !isInitializedRef.current) {
+      if (progress.reconstruction_states?.[levelKey]) {
+        const { unlocked_length, length_xp } = progress.reconstruction_states[levelKey];
+        setUnlockedLengthState(unlocked_length);
+        setLengthXPState(length_xp);
+        if (!isLevelCompletedBefore) {
+          setSequenceLength(unlocked_length);
+        }
+      }
+      isInitializedRef.current = true;
+    }
+  }, [progress, levelKey, isLevelCompletedBefore]);
+
+  const saveProgress = async (len: number, xp: number) => {
+    setUnlockedLengthState(len);
+    setLengthXPState(xp);
+
+    if (session?.access_token) {
+      try {
+        const updatedProg = await saveReconstructionProgress(
+          session.access_token,
+          config.stage,
+          config.level,
+          len,
+          xp
+        );
+        updateProgress(updatedProg);
+      } catch (err) {
+        console.error('[ReconstructionEngine] Failed to save progress to backend:', err);
+      }
+    }
+  };
+
   const saveLengthXP = (xp: number) => {
-    setLengthXP(xp);
-    localStorage.setItem(xpStorageKey, xp.toString());
+    saveProgress(unlockedLength, xp);
+  };
+
+  const setUnlockedLength = (len: number) => {
+    saveProgress(len, lengthXP);
   };
 
   const [lengthCompletedThisRound, setLengthCompletedThisRound] = useState<boolean>(false);
@@ -140,8 +187,9 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
   const [sequenceLength, setSequenceLength] = useState<number>(() => {
     if (isOrderedLengthProgression) {
       if (isLevelCompletedBefore) return config.defaultLength;
-      const saved = localStorage.getItem(storageKey);
-      return saved ? Math.max(parseInt(saved, 10), config.minLength) : config.defaultLength;
+      const backendVal = progress?.reconstruction_states?.[levelKey]?.unlocked_length;
+      if (backendVal !== undefined) return Math.max(backendVal, config.minLength);
+      return config.defaultLength;
     }
     return config.defaultLength;
   });
@@ -176,8 +224,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     if (lengthCompletedThisRound) {
       timeoutId = setTimeout(() => {
         setLengthCompletedThisRound(false);
-        saveLengthXP(0);
         const nextLen = sequenceLength + 1;
+        saveProgress(nextLen, 0);
         setSequenceLength(nextLen);
         startNewRound(nextLen);
       }, 1500);
@@ -202,9 +250,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
           setSessionFinished(false);
           setCompletionResponse(null);
           if (isOrderedLengthProgression && !isLevelCompletedBefore) {
-            saveLengthXP(0);
-            setUnlockedLength(config.minLength);
-            localStorage.setItem(storageKey, config.minLength.toString());
+            saveProgress(config.minLength, 0);
             setSequenceLength(config.minLength);
             startNewRound(config.minLength);
           } else {
@@ -425,7 +471,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
       if (isCorrect) {
         setScore(prev => prev + 1);
         setRoundStatus('correct');
-        if (isOrderedLengthProgression && !isLevelCompletedBefore) {
+        if (isOrderedLengthProgression && !isLevelCompletedBefore && sequenceLength === unlockedLength) {
           nextLengthXP = lengthXP + 10;
           saveLengthXP(nextLengthXP);
           triggerXPEffects();
@@ -454,12 +500,11 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
         }
       }
 
-      if (isOrderedLengthProgression && !isLevelCompletedBefore) {
+      if (isOrderedLengthProgression && !isLevelCompletedBefore && sequenceLength === unlockedLength) {
         if (isCorrect && nextLengthXP >= 100) {
           const nextLen = sequenceLength + 1;
           if (nextLen <= config.maxLength) {
             setUnlockedLength(nextLen);
-            localStorage.setItem(storageKey, nextLen.toString());
             setLengthCompletedThisRound(true);
           } else {
             // Completed maximum length! Finish session.
@@ -538,6 +583,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     config.swaraButtons.length <= 8
       ? 'grid-cols-4 md:grid-cols-8'
       : 'grid-cols-4 md:grid-cols-7 lg:grid-cols-13';
+
+  const displayXP = (isLevelCompletedBefore || sequenceLength < unlockedLength) ? 100 : lengthXP;
 
   const isLevelFinished = isOrderedLengthProgression && !isLevelCompletedBefore
     ? !!completionResponse
@@ -688,7 +735,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                       Length {sequenceLength} Mastery
                     </span>
                     <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 shadow-sm">
-                      {lengthXP} / 100 XP
+                      {displayXP} / 100 XP
                     </span>
                   </div>
 
@@ -713,10 +760,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                     >
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 transition-all duration-500 ease-out animate-shimmer-bar relative"
-                        style={{ width: `${Math.min((lengthXP / 100) * 100, 100)}%` }}
+                        style={{ width: `${Math.min((displayXP / 100) * 100, 100)}%` }}
                       >
                         {/* Glow tip at the end of progress */}
-                        {lengthXP > 0 && (
+                        {displayXP > 0 && (
                           <span className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#fff,0_0_15px_#10b981] animate-pulse" />
                         )}
                       </div>
@@ -971,9 +1018,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                         setSessionFinished(false);
                         setCompletionResponse(null);
                         if (isOrderedLengthProgression && !isLevelCompletedBefore) {
-                          saveLengthXP(0);
-                          setUnlockedLength(config.minLength);
-                          localStorage.setItem(storageKey, config.minLength.toString());
+                          saveProgress(config.minLength, 0);
                           setSequenceLength(config.minLength);
                           startNewRound(config.minLength);
                         } else {
@@ -1112,8 +1157,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
             <button
               onClick={() => {
                 setLengthCompletedThisRound(false);
-                saveLengthXP(0);
                 const nextLen = sequenceLength + 1;
+                saveProgress(nextLen, 0);
                 setSequenceLength(nextLen);
                 startNewRound(nextLen);
               }}

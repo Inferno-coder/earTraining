@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
     total_xp INTEGER NOT NULL DEFAULT 0,
     total_questions INTEGER NOT NULL DEFAULT 0,
     total_correct INTEGER NOT NULL DEFAULT 0,
+    reconstruction_states JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -69,6 +70,10 @@ export async function initializeDatabase() {
 
     // Run combined schema creation script
     await pool.query(schema);
+
+    // Migration: ensure reconstruction_states column exists in user_progress table
+    await pool.query("ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS reconstruction_states JSONB NOT NULL DEFAULT '{}'::jsonb");
+
     console.log('[Database Init]: Core backend tables verified and ready.');
   } catch (error: any) {
     console.error('[Database Init Error]: Failed to initialize database tables:', error.message);

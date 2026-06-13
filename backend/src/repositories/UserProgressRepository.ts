@@ -57,6 +57,7 @@ export class UserProgressRepository {
             total_xp = $6,
             total_questions = $7,
             total_correct = $8,
+            reconstruction_states = $9,
             updated_at = NOW()
         WHERE user_id = $1
         RETURNING *
@@ -70,6 +71,7 @@ export class UserProgressRepository {
         progress.total_xp,
         progress.total_questions,
         progress.total_correct,
+        JSON.stringify(progress.reconstruction_states || {}),
       ];
       const { rows } = await client.query(query, values);
       return rows[0] as UserProgress;
@@ -92,6 +94,7 @@ export class UserProgressRepository {
             total_xp = $6,
             total_questions = $7,
             total_correct = $8,
+            reconstruction_states = $9,
             updated_at = NOW()
         WHERE user_id = $1
         RETURNING *
@@ -105,11 +108,36 @@ export class UserProgressRepository {
         progress.total_xp,
         progress.total_questions,
         progress.total_correct,
+        JSON.stringify(progress.reconstruction_states || {}),
       ];
       const { rows } = await pool.query(query, values);
       return rows[0] as UserProgress;
     } catch (error: any) {
       throw new Error(`DB Error [updateProgress]: ${error.message}`);
+    }
+  }
+
+  /**
+   * Atomically merges a reconstruction state update into reconstruction_states JSONB
+   */
+  async updateReconstructionState(
+    userId: string,
+    key: string,
+    state: { unlocked_length: number; length_xp: number }
+  ): Promise<UserProgress> {
+    try {
+      const query = `
+        UPDATE user_progress
+        SET reconstruction_states = COALESCE(reconstruction_states, '{}'::jsonb) || $2::jsonb,
+            updated_at = NOW()
+        WHERE user_id = $1
+        RETURNING *
+      `;
+      const updatePayload = { [key]: state };
+      const { rows } = await pool.query(query, [userId, JSON.stringify(updatePayload)]);
+      return rows[0] as UserProgress;
+    } catch (error: any) {
+      throw new Error(`DB Error [updateReconstructionState]: ${error.message}`);
     }
   }
 }

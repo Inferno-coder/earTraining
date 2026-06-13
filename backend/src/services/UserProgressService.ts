@@ -150,4 +150,21 @@ export class UserProgressService {
       updatedProgress: result
     };
   }
+
+  /**
+   * Saves intermediate reconstruction level progress (note length and XP) to user progress
+   */
+  async saveReconstructionProgress(
+    userId: string,
+    stage: number,
+    level: number,
+    unlockedLength: number,
+    lengthXP: number
+  ): Promise<UserProgress> {
+    const key = `s${stage}l${level}`;
+    return await this.repository.updateReconstructionState(userId, key, {
+      unlocked_length: unlockedLength,
+      length_xp: lengthXP
+    });
+  }
 }

@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
     total_xp INTEGER NOT NULL DEFAULT 0,
     total_questions INTEGER NOT NULL DEFAULT 0,
     total_correct INTEGER NOT NULL DEFAULT 0,
+    reconstruction_states JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

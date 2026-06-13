@@ -7,6 +7,7 @@ export interface UserProgress {
   total_xp: number;
   total_questions: number;
   total_correct: number;
+  reconstruction_states?: Record<string, { unlocked_length: number; length_xp: number }>;
   created_at?: string;
   updated_at?: string;
 }

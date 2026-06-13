@@ -9,6 +9,7 @@ export interface UserProgress {
   total_xp: number;
   total_questions: number;
   total_correct: number;
+  reconstruction_states?: Record<string, { unlocked_length: number; length_xp: number }>;
   created_at?: string;
   updated_at?: string;
 }
@@ -101,6 +102,30 @@ export const getUserProgress = async (token: string): Promise<UserProgress> => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Failed to fetch user progress: ${response.statusText}`);
+  }
+
+  return await response.json();
+};
+
+export const saveReconstructionProgress = async (
+  token: string,
+  stage: number,
+  level: number,
+  unlockedLength: number,
+  lengthXP: number
+): Promise<UserProgress> => {
+  const response = await fetch(`${backendUrl}/api/user/reconstruction-progress`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ stage, level, unlockedLength, lengthXP }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to save reconstruction progress: ${response.statusText}`);
   }
 
   return await response.json();
