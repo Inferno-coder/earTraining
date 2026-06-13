@@ -42,6 +42,25 @@ export default function Stage1Level0({ onBack, onNext, onChangeLevel }: Stage1Le
   const [lastPlayedKey, setLastPlayedKey] = useState<KeyboardKey | null>(null);
   const [tourStep, setTourStep] = useState<number>(0);
 
+  const [isAutoplayActive, setIsAutoplayActive] = useState<boolean>(() => {
+    return localStorage.getItem('earTraining_autoplay_active') === 'true';
+  });
+
+  const toggleAutoplay = () => {
+    const nextVal = !isAutoplayActive;
+    setIsAutoplayActive(nextVal);
+    localStorage.setItem('earTraining_autoplay_active', nextVal.toString());
+  };
+
+  useEffect(() => {
+    if (isAutoplayActive) {
+      const timeoutId = setTimeout(() => {
+        onNext();
+      }, 1500); // Wait 1.5s in sandbox then proceed
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isAutoplayActive, onNext]);
+
   // Auto-start tour if not completed before
   useEffect(() => {
     const tourCompleted = localStorage.getItem('exploreTourCompleted');
@@ -123,6 +142,15 @@ export default function Stage1Level0({ onBack, onNext, onChangeLevel }: Stage1Le
         <LevelSelector currentStage={1} currentLevel={0} onChangeLevel={onChangeLevel} />
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleAutoplay}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${isAutoplayActive
+              ? 'bg-red-500/20 border-red-500/30 text-red-300 hover:bg-red-500/45 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+              : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/45 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+            }`}
+          >
+            {isAutoplayActive ? '⏹️ Stop Autoplay' : '🤖 Autoplay'}
+          </button>
           <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
             <Volume2 className="w-3.5 h-3.5 text-primary-400" />
             Octave: C4 - C5

@@ -42,7 +42,7 @@ export const getNextLevel = (stage: number, level: number): LevelCoord | null =>
     if (level === 4) return { stage: 5, level: 5 };
     if (level === 5) return { stage: 5, level: 6 };
     if (level === 6) return { stage: 5, level: 7 };
-    if (level === 7) return null; // Finished Stage 5!
+    if (level === 7) return { stage: 5, level: 8 }; // Unlocks virtual level 8 to indicate Stage 5 Level 7 completion
   }
   return null;
 };
@@ -98,7 +98,8 @@ export class UserProgressService {
     level: number,
     totalQuestions: number,
     correctAnswers: number,
-    client: PoolClient
+    client: PoolClient,
+    isCompletedSuccessfully?: boolean
   ): Promise<{ pass: boolean; updatedProgress: UserProgress }> {
     // 1. Fetch current progress
     let progress = await this.repository.findByUserId(userId);
@@ -107,11 +108,11 @@ export class UserProgressService {
       progress = await this.repository.createDefault(userId);
     }
 
-    // 2. Evaluate if level passed
-    const pass = checkLevelPass(totalQuestions, correctAnswers);
-
-    // 3. Compute XP gained (Only for Reconstruction levels: Stage 4 Level 1 and Stage 5 Level 7)
+    // 2. Evaluate if level passed (Bypass threshold checks for Reconstruction levels ONLY if completed successfully)
     const isReconstructionLevel = (stage === 4 && level === 1) || (stage === 5 && level === 7);
+    const pass = isReconstructionLevel ? !!isCompletedSuccessfully : checkLevelPass(totalQuestions, correctAnswers);
+
+    // 3. Compute XP gained (Only for Reconstruction levels)
     const xpGained = isReconstructionLevel ? (correctAnswers * 10) + (pass ? 50 : 0) : 0;
 
     // 4. Copy state to avoid mutations

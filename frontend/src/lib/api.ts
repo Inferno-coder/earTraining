@@ -70,7 +70,8 @@ export const logPracticeAttempt = async (token: string, payload: LogAttemptPaylo
 export const finishPracticeSession = async (
   token: string,
   sessionId: string,
-  durationMs: number
+  durationMs: number,
+  isCompletedSuccessfully?: boolean
 ): Promise<FinishSessionResponse> => {
   const response = await fetch(`${backendUrl}/api/practice/session/finish`, {
     method: 'POST',
@@ -78,7 +79,7 @@ export const finishPracticeSession = async (
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ sessionId, durationMs }),
+    body: JSON.stringify({ sessionId, durationMs, isCompletedSuccessfully }),
   });
 
   if (!response.ok) {

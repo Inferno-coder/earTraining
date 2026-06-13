@@ -88,7 +88,8 @@ export class PracticeService {
   async finishSession(
     userId: string,
     sessionId: string,
-    durationMs: number
+    durationMs: number,
+    isCompletedSuccessfully?: boolean
   ): Promise<{ session: PracticeSession; pass: boolean; progress: UserProgress }> {
     if (!sessionId) {
       throw new Error('Validation Error: Session ID is required to complete session');
@@ -133,7 +134,8 @@ export class PracticeService {
         session.level,
         total,
         correct,
-        client
+        client,
+        isCompletedSuccessfully
       );
 
       await client.query('COMMIT');

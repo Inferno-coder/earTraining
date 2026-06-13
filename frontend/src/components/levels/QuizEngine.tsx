@@ -98,6 +98,83 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
   const [attempts, setAttempts] = useState(0);
   const [quizDeck, setQuizDeck] = useState<any[]>([]);
 
+  const [isAutoplayActive, setIsAutoplayActive] = useState<boolean>(() => {
+    return localStorage.getItem('earTraining_autoplay_active') === 'true';
+  });
+
+  const toggleAutoplay = () => {
+    const nextVal = !isAutoplayActive;
+    setIsAutoplayActive(nextVal);
+    localStorage.setItem('earTraining_autoplay_active', nextVal.toString());
+  };
+
+  useEffect(() => {
+    if (!isAutoplayActive) return;
+
+    let timeoutId: any = null;
+
+    if (showTutorial) {
+      timeoutId = setTimeout(() => {
+        setShowTutorial(false);
+      }, 800);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (completionResponse) {
+      timeoutId = setTimeout(() => {
+        if (completionResponse.pass && onNext) {
+          resetQuiz();
+          onNext();
+        } else {
+          resetQuiz();
+        }
+      }, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (isPlaying) {
+      return; // Just wait, state change will trigger next step
+    }
+
+    if (!targetNote) {
+      timeoutId = setTimeout(() => {
+        playRandomMysteryNote();
+      }, 600);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (feedback.status !== 'idle') {
+      timeoutId = setTimeout(() => {
+        const totalRounds = quizDeck.length || 10;
+        if (attempts < totalRounds) {
+          playRandomMysteryNote();
+        }
+      }, 1200);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (targetNote && feedback.status === 'idle') {
+      const choices = ((targetNote && targetNote.choices) || config.choices || []) as string[];
+      const correctChoice = choices.find(choice => config.checkAnswer(targetNote, choice).isCorrect);
+      if (correctChoice) {
+        timeoutId = setTimeout(() => {
+          handleSelectChoice(correctChoice);
+        }, 500);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [
+    isAutoplayActive,
+    showTutorial,
+    completionResponse,
+    isPlaying,
+    targetNote,
+    feedback,
+    quizDeck,
+    attempts,
+    config
+  ]);
+
   const initSession = async () => {
     if (!session?.access_token) return;
     try {
@@ -317,6 +394,15 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
         <LevelSelector currentStage={config.stage} currentLevel={config.level} onChangeLevel={handleLevelChange} />
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleAutoplay}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${isAutoplayActive
+              ? 'bg-red-500/20 border-red-500/30 text-red-300 hover:bg-red-500/45 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+              : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/45 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+              }`}
+          >
+            {isAutoplayActive ? '⏹️ Stop Autoplay' : '🤖 Autoplay'}
+          </button>
           <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
             <Volume2 className="w-3.5 h-3.5 text-primary-400" />
             Enabled Notes: {config.enabledNotesLabel}

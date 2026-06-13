@@ -59,8 +59,8 @@ export class PracticeController {
         return;
       }
 
-      const { sessionId, durationMs } = req.body;
-      const result = await this.service.finishSession(userId, sessionId, Number(durationMs));
+      const { sessionId, durationMs, isCompletedSuccessfully } = req.body;
+      const result = await this.service.finishSession(userId, sessionId, Number(durationMs), isCompletedSuccessfully);
       
       res.status(200).json(result);
     } catch (error: any) {

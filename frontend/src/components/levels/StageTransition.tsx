@@ -7,8 +7,18 @@ interface StageTransitionProps {
   onBegin: () => void;
   onHome: () => void;
 }
-
 export default function StageTransition({ stage, onBegin, onHome }: StageTransitionProps) {
+  // Autoplay support to automatically proceed through stage transitions
+  useEffect(() => {
+    const isAutoplay = localStorage.getItem('earTraining_autoplay_active') === 'true';
+    if (isAutoplay) {
+      const timer = setTimeout(() => {
+        onBegin();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [stage, onBegin]);
+
   // Play transition melody on mount
   useEffect(() => {
     const playIntroMelody = async () => {

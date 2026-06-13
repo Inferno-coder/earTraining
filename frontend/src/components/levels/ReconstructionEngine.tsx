@@ -74,14 +74,14 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     return false;
   };
 
-  const isOrderedLengthProgression = config.stage === 4 && config.level === 1;
+  const isOrderedLengthProgression = (config.stage === 4 && config.level === 1) || (config.stage === 5 && config.level === 7);
   const isLevelCompletedBefore = progress && (
     progress.highest_unlocked_stage > config.stage ||
     (progress.highest_unlocked_stage === config.stage && progress.highest_unlocked_level > config.level)
   ) ? true : false;
 
-  const storageKey = `earTraining_s4l1_unlocked_length_u${user?.id || 'anonymous'}`;
-  const xpStorageKey = `earTraining_s4l1_length_xp_u${user?.id || 'anonymous'}`;
+  const storageKey = `earTraining_s${config.stage}l${config.level}_unlocked_length_u${user?.id || 'anonymous'}`;
+  const xpStorageKey = `earTraining_s${config.stage}l${config.level}_length_xp_u${user?.id || 'anonymous'}`;
 
   // Set initial state
   const [unlockedLength, setUnlockedLength] = useState<number>(() => {
@@ -145,6 +145,17 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     }
     return config.defaultLength;
   });
+
+  const [isAutoplayActive, setIsAutoplayActive] = useState<boolean>(() => {
+    return localStorage.getItem('earTraining_autoplay_active') === 'true';
+  });
+
+  const toggleAutoplay = () => {
+    const nextVal = !isAutoplayActive;
+    setIsAutoplayActive(nextVal);
+    localStorage.setItem('earTraining_autoplay_active', nextVal.toString());
+  };
+
   const [targetSequence, setTargetSequence] = useState<string[]>([]);
   const [userSequence, setUserSequence] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -156,6 +167,107 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
 
   const [score, setScore] = useState<number>(0);
   const [attempts, setAttempts] = useState<number>(0);
+
+  useEffect(() => {
+    if (!isAutoplayActive) return;
+
+    let timeoutId: any = null;
+
+    if (lengthCompletedThisRound) {
+      timeoutId = setTimeout(() => {
+        setLengthCompletedThisRound(false);
+        saveLengthXP(0);
+        const nextLen = sequenceLength + 1;
+        setSequenceLength(nextLen);
+        startNewRound(nextLen);
+      }, 1500);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (completionResponse) {
+      timeoutId = setTimeout(() => {
+        if (completionResponse.pass && onNext) {
+          setScore(0);
+          setAttempts(0);
+          setSessionId(null);
+          setSessionStartTime(null);
+          setSessionFinished(false);
+          setCompletionResponse(null);
+          onNext();
+        } else {
+          setScore(0);
+          setAttempts(0);
+          setSessionId(null);
+          setSessionStartTime(null);
+          setSessionFinished(false);
+          setCompletionResponse(null);
+          if (isOrderedLengthProgression && !isLevelCompletedBefore) {
+            saveLengthXP(0);
+            setUnlockedLength(config.minLength);
+            localStorage.setItem(storageKey, config.minLength.toString());
+            setSequenceLength(config.minLength);
+            startNewRound(config.minLength);
+          } else {
+            startNewRound(sequenceLength);
+          }
+          initSession();
+        }
+      }, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (targetSequence.length === 0) {
+      startNewRound(sequenceLength);
+      return;
+    }
+
+    if (isPlaying || roundStatus === 'playing') {
+      return; // Just wait, state change will trigger next step
+    }
+
+    if (roundStatus === 'correct') {
+      timeoutId = setTimeout(() => {
+        startNewRound(sequenceLength);
+      }, 1200);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (roundStatus === 'incorrect') {
+      timeoutId = setTimeout(() => {
+        startNewRound(sequenceLength);
+      }, 1200);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (roundStatus === 'idle') {
+      timeoutId = setTimeout(() => {
+        handlePlaySequence();
+      }, 600);
+      return () => clearTimeout(timeoutId);
+    }
+
+    if (roundStatus === 'entering') {
+      const targetSwaras = targetSequence.map(note => config.noteToSwara[note]);
+      const currentLength = userSequence.length;
+      if (currentLength < targetSwaras.length) {
+        const nextSwara = targetSwaras[currentLength];
+        timeoutId = setTimeout(() => {
+          handleTapSwara(nextSwara);
+        }, 400);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [
+    isAutoplayActive,
+    roundStatus,
+    isPlaying,
+    userSequence,
+    targetSequence,
+    lengthCompletedThisRound,
+    completionResponse,
+    sequenceLength,
+    onNext
+  ]);
 
   const initSession = async () => {
     if (!session?.access_token) return;
@@ -356,7 +468,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
               try {
                 setSessionFinished(true);
                 const finalScore = isCorrect ? score + 1 : score;
-                const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
+                const res = await finishPracticeSession(session.access_token, sessionId, durationMs, true);
                 console.log('[ReconstructionEngine] Practice session finished successfully');
                 if (res && res.progress) {
                   updateProgress(res.progress);
@@ -378,7 +490,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
           try {
             setSessionFinished(true);
             const finalScore = isCorrect ? score + 1 : score;
-            const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
+            const res = await finishPracticeSession(session.access_token, sessionId, durationMs, true);
             console.log('[ReconstructionEngine] Practice session finished successfully');
             if (res && res.progress) {
               updateProgress(res.progress);
@@ -460,6 +572,15 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
         <LevelSelector currentStage={config.stage} currentLevel={config.level} onChangeLevel={handleLevelChange} />
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleAutoplay}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${isAutoplayActive
+              ? 'bg-red-500/20 border-red-500/30 text-red-300 hover:bg-red-500/45 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+              : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/45 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+            }`}
+          >
+            {isAutoplayActive ? '⏹️ Stop Autoplay' : '🤖 Autoplay'}
+          </button>
           <div className="hidden md:flex items-center gap-2 text-xs font-mono text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
             <Volume2 className="w-3.5 h-3.5 text-primary-400" />
             Active: {config.enabledNotesLabel}
@@ -587,9 +708,8 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                     ))}
 
                     <div
-                      className={`w-full h-3.5 bg-slate-950/80 rounded-full border border-white/5 p-0.5 relative shadow-inner transition-all duration-300 ${
-                        barPulse ? 'ring-2 ring-emerald-500/50 scale-[1.02] shadow-[0_0_15px_rgba(16,185,129,0.3)]' : ''
-                      }`}
+                      className={`w-full h-3.5 bg-slate-950/80 rounded-full border border-white/5 p-0.5 relative shadow-inner transition-all duration-300 ${barPulse ? 'ring-2 ring-emerald-500/50 scale-[1.02] shadow-[0_0_15px_rgba(16,185,129,0.3)]' : ''
+                        }`}
                     >
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 transition-all duration-500 ease-out animate-shimmer-bar relative"
@@ -834,25 +954,10 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                   </p>
 
                   {completionResponse && (
-                    <div className={`p-3 rounded-lg text-center text-xs font-semibold w-full ${completionResponse.pass
-                      ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                      : 'bg-red-500/10 border border-red-500/30 text-red-400'
-                      }`}>
-                      {completionResponse.pass ? (
-                        <>
-                          <p className="font-bold text-sm">🎉 Level Passed!</p>
-                          <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
-                          <p className="text-[10px] text-green-300 mt-0.5">Next Level Unlocked!</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="font-bold text-sm">❌ Level Failed</p>
-                          <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
-                          <p className="text-[10px] text-red-300 mt-0.5">
-                            Scored {score} correct (requires {getReconstructionTotalQuestions(sequenceLength) >= 25 ? 20 : getReconstructionTotalQuestions(sequenceLength) >= 20 ? 16 : getReconstructionTotalQuestions(sequenceLength) >= 15 ? 12 : 8} to unlock next level)
-                          </p>
-                        </>
-                      )}
+                    <div className="p-3 rounded-lg text-center text-xs font-semibold w-full bg-green-500/10 border border-green-500/30 text-green-400">
+                      <p className="font-bold text-sm">🎉 Level Passed!</p>
+                      <p className="text-[11px] text-gray-300 mt-1">XP Gained: +{completionResponse.xpGained} XP</p>
+                      <p className="text-[10px] text-green-300 mt-0.5">Next Level Unlocked!</p>
                     </div>
                   )}
 

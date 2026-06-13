@@ -59,8 +59,9 @@ function getViewStateForProgress(stage: number, level: number): ViewState {
     if (level === 4) return 's5l4';
     if (level === 5) return 's5l5';
     if (level === 6) return 's5l6';
-    if (level === 7) return 's5l7';
+    if (level >= 7) return 's5l7';
   }
+  if (stage > 5) return 's5l7';
   return 't1';
 }
 
