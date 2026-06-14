@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, Home, ChevronRight, Lock, Award, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete, EyeOff, Home, ChevronRight, Lock, Award, Sparkles, HelpCircle, X } from 'lucide-react';
 import { playNote, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
 import { completePracticeLevel, logPracticeAttempt, saveReconstructionProgress } from '../../lib/api';
 import LevelSelector from './LevelSelector';
+import { getLevelGuide } from './levelGuides';
 
 const swaraDetailsMap: Record<string, { full: string; note: string; color: string; hoverColor: string; shadow: string }> = {
   'Sa': { full: 'Shadjam', note: 'C4', color: 'bg-rose-500/10 border-rose-500/30 hover:border-rose-400 text-rose-300', hoverColor: 'hover:bg-rose-500/20', shadow: 'shadow-[0_0_15px_rgba(244,63,94,0.3)]' },
@@ -60,6 +61,15 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     }
   };
   const [completionResponse, setCompletionResponse] = useState<{ pass: boolean; xpGained?: number } | null>(null);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isGuidePulsing, setIsGuidePulsing] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsGuidePulsing(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
 
@@ -594,7 +604,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
               className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer ${isAutoplayActive
                 ? 'bg-red-500/20 border-red-500/30 text-red-300 hover:bg-red-500/45 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
                 : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/45 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-              }`}
+                }`}
             >
               {isAutoplayActive ? '⏹️ Stop Autoplay' : '🤖 Autoplay'}
             </button>
@@ -632,10 +642,30 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 pt-3 pb-8 md:pt-6 md:pb-12 flex flex-col relative z-10 space-y-6 md:space-y-8">
 
         {/* Title Block */}
-        <div className="text-center max-w-2xl mx-auto space-y-2">
+        <div className="text-center max-w-2xl mx-auto space-y-2.5">
           <span className="text-xs font-mono text-accent-rose uppercase tracking-widest font-bold block">Interactive Dictation</span>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">{config.title}</h2>
-          <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+          <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">{config.title}</h2>
+            <div className="relative ml-3 inline-flex">
+              {/* Pulsing Sonar Ring behind the button */}
+              {isGuidePulsing && (
+                <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-500 to-amber-500 opacity-75 blur-xs animate-ping pointer-events-none" />
+              )}
+
+              <button
+                onClick={() => setIsInfoOpen(true)}
+                className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95 border select-none ${isGuidePulsing
+                    ? 'bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 hover:from-amber-300 hover:via-pink-400 hover:to-purple-500 text-white border-white/20 shadow-[0_0_20px_rgba(236,72,153,0.4)] hover:shadow-[0_0_30px_rgba(236,72,153,0.7)] animate-pulse'
+                    : 'bg-white/5 border-white/10 text-gray-300 hover:text-white hover:bg-white/10 hover:border-white/20 shadow-none'
+                  } text-[10px] md:text-xs font-black tracking-wider uppercase`}
+                title="How to Play"
+              >
+                <HelpCircle className={`w-3.5 h-3.5 ${isGuidePulsing ? 'text-white animate-bounce' : 'text-gray-400'}`} />
+                <span className="font-mono tracking-widest text-[9px] md:text-[10px]">GUIDE</span>
+              </button>
+            </div>
+          </div>
+          <p className="text-gray-300 text-xs md:text-sm leading-relaxed max-w-lg mx-auto">
             {config.subtitle}
           </p>
         </div>
@@ -1138,6 +1168,89 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
           </div>
         </div>
       )}
+      {/* Information/Guide Modal */}
+      {isInfoOpen && (() => {
+        const guide = getLevelGuide(config.stage, config.level, true);
+        return (
+          <div className="fixed inset-0 bg-[#020617]/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4 transition-all duration-300 animate-fade-in animate-duration-200">
+            {/* Modal Card */}
+            <div className="relative bg-slate-900/95 border border-white/10 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl flex flex-col gap-6 overflow-hidden max-h-[90vh] overflow-y-auto animate-zoom-in font-sans">
+
+              {/* Premium Glow effect in background */}
+              <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-accent-rose/20 filter blur-2xl pointer-events-none"></div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setIsInfoOpen(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Title & Badge */}
+              <div className="flex flex-col items-center text-center gap-2 pt-2">
+                <span className="text-4xl">{guide.icon}</span>
+                <span className="text-[10px] font-mono font-bold text-accent-rose uppercase tracking-widest bg-accent-rose/10 px-3 py-1 rounded-full border border-accent-rose/20">
+                  {guide.badge}
+                </span>
+                <h3 className="text-xl font-extrabold text-white mt-1">
+                  About {config.title}
+                </h3>
+              </div>
+
+              {/* Objective */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider text-left">🎯 Core Goal</h4>
+                <p className="text-sm text-gray-300 leading-relaxed bg-white/5 p-4 rounded-2xl border border-white/5 text-left">
+                  {guide.objective}
+                </p>
+              </div>
+
+              {/* How to Play */}
+              <div className="space-y-2.5">
+                <h4 className="text-xs font-mono font-bold text-gray-400 uppercase tracking-wider text-left">🎮 How to Play</h4>
+                <ul className="space-y-2 text-xs text-gray-300 pl-1 text-left">
+                  {guide.howToPlay.map((step, idx) => (
+                    <li key={idx} className="flex gap-2.5 items-start">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent-rose/10 border border-accent-rose/20 text-accent-rose flex items-center justify-center font-bold text-[10px] mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span className="leading-normal">{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Ear Training Benefits */}
+              <div className="space-y-2 bg-gradient-to-r from-accent-rose/15 to-accent-rose/5 border border-accent-rose/20 p-4 rounded-2xl text-left">
+                <h4 className="text-xs font-bold text-accent-rose">💡 Why it matters</h4>
+                <p className="text-xs text-accent-rose-100/90 leading-relaxed">
+                  {guide.earTrainingBenefits}
+                </p>
+              </div>
+
+              {/* Pro Success Tip */}
+              <div className="space-y-2 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left">
+                <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  💡 Pro Success Tip
+                </h4>
+                <p className="text-xs text-amber-200/90 leading-relaxed font-medium">
+                  {guide.proTip}
+                </p>
+              </div>
+
+              {/* Start Training Button */}
+              <button
+                onClick={() => setIsInfoOpen(false)}
+                className="w-full py-3.5 rounded-2xl font-bold bg-gradient-to-r from-accent-rose to-red-600 hover:from-accent-rose hover:to-red-500 text-white flex items-center justify-center shadow-lg shadow-accent-rose/20 active:scale-[0.98] transition-all cursor-pointer mt-2"
+              >
+                Let's Train! 🚀
+              </button>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
