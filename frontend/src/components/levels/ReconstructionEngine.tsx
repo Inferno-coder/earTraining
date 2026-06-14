@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Play, RefreshCw, Volume2, RotateCcw, Eye, Delete
 import { playNote, stopTanpura } from '../../utils/audio';
 import type { ReconstructionConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
-import { startPracticeSession, logPracticeAttempt, finishPracticeSession, saveReconstructionProgress } from '../../lib/api';
+import { completePracticeLevel, logPracticeAttempt, saveReconstructionProgress } from '../../lib/api';
 import LevelSelector from './LevelSelector';
 
 const swaraDetailsMap: Record<string, { full: string; note: string; color: string; hoverColor: string; shadow: string }> = {
@@ -54,17 +54,14 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
   // Auth & API states
   const { session, updateProgress, progress } = useAuth();
 
-  const handleLevelChange = async (stage: number, level: number) => {
-    await endSession();
+  const handleLevelChange = (stage: number, level: number) => {
     if (onChangeLevel) {
       onChangeLevel(stage, level);
     }
   };
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
-  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
-  const [sessionFinished, setSessionFinished] = useState<boolean>(false);
   const [completionResponse, setCompletionResponse] = useState<{ pass: boolean; xpGained?: number } | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
 
   const isNextLevelUnlocked = (): boolean => {
     if (!progress) return false;
@@ -237,17 +234,11 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
         if (completionResponse.pass && onNext) {
           setScore(0);
           setAttempts(0);
-          setSessionId(null);
-          setSessionStartTime(null);
-          setSessionFinished(false);
           setCompletionResponse(null);
           onNext();
         } else {
           setScore(0);
           setAttempts(0);
-          setSessionId(null);
-          setSessionStartTime(null);
-          setSessionFinished(false);
           setCompletionResponse(null);
           if (isOrderedLengthProgression && !isLevelCompletedBefore) {
             saveProgress(config.minLength, 0);
@@ -256,7 +247,6 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
           } else {
             startNewRound(sequenceLength);
           }
-          initSession();
         }
       }, 2000);
       return () => clearTimeout(timeoutId);
@@ -315,46 +305,15 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
     onNext
   ]);
 
-  const initSession = async () => {
-    if (!session?.access_token) return;
-    try {
-      const sid = await startPracticeSession(session.access_token, config.stage, config.level);
-      setSessionId(sid);
-      setSessionStartTime(Date.now());
-      setSessionFinished(false);
-    } catch (err) {
-      console.error('[ReconstructionEngine] Failed to start reconstruction session:', err);
-    }
-  };
-
-  const endSession = async () => {
-    if (session?.access_token && sessionId && sessionStartTime && !sessionFinished) {
-      const durationMs = Date.now() - sessionStartTime;
-      try {
-        setSessionFinished(true);
-        const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
-        console.log('[ReconstructionEngine] Practice session finished successfully');
-        if (res && res.progress) {
-          updateProgress(res.progress);
-        }
-      } catch (err) {
-        console.error('[ReconstructionEngine] Failed to finish reconstruction session:', err);
-      }
-    }
-  };
-
-  const handleBack = async () => {
-    await endSession();
+  const handleBack = () => {
     onBack();
   };
 
-  const handleHome = async () => {
-    await endSession();
+  const handleHome = () => {
     onHome();
   };
 
-  const handleNext = async () => {
-    await endSession();
+  const handleNext = () => {
     if (onNext) onNext();
   };
 
@@ -397,13 +356,11 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
 
   // Restart practice session when configuration changes
   useEffect(() => {
-    setSessionId(null);
-    setSessionStartTime(null);
-    setAttemptStartTime(null);
-    setSessionFinished(false);
+    setCompletionResponse(null);
     setScore(0);
     setAttempts(0);
-    initSession();
+    setSessionId(crypto.randomUUID());
+    setAttemptStartTime(null);
   }, [config]);
 
   // Clean up Tanpura on unmount
@@ -446,7 +403,7 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
   const handleTapSwara = async (swara: string) => {
     const totalRounds = getReconstructionTotalQuestions(sequenceLength);
     const isFinished = isOrderedLengthProgression && !isLevelCompletedBefore ? !!completionResponse : attempts >= totalRounds;
-    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || !sessionId || isFinished) return;
+    if (isPlaying || roundStatus === 'correct' || roundStatus === 'incorrect' || targetSequence.length === 0 || isFinished) return;
 
     // Play note sound instantly
     const details = getSwaraDetails(swara);
@@ -485,8 +442,12 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
 
       if (session?.access_token) {
         try {
+          const activeSessionId = sessionId || crypto.randomUUID();
+          if (!sessionId) {
+            setSessionId(activeSessionId);
+          }
           await logPracticeAttempt(session.access_token, {
-            sessionId,
+            sessionId: activeSessionId,
             stage: config.stage,
             level: config.level,
             questionType: 'MELODY_RECONSTRUCTION',
@@ -507,45 +468,53 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
             setUnlockedLength(nextLen);
             setLengthCompletedThisRound(true);
           } else {
-            // Completed maximum length! Finish session.
-            if (session?.access_token && !sessionFinished) {
-              const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+            // Completed maximum length! Complete level.
+            if (session?.access_token) {
               try {
-                setSessionFinished(true);
                 const finalScore = isCorrect ? score + 1 : score;
-                const res = await finishPracticeSession(session.access_token, sessionId, durationMs, true);
-                console.log('[ReconstructionEngine] Practice session finished successfully');
-                if (res && res.progress) {
-                  updateProgress(res.progress);
+                const res = await completePracticeLevel(session.access_token, {
+                  stage: config.stage,
+                  level: config.level,
+                  totalQuestions: newAttemptsCount,
+                  correctAnswers: finalScore,
+                  isCompletedSuccessfully: true
+                });
+                console.log('[ReconstructionEngine] Practice level completed successfully');
+                if (res && res.updatedProgress) {
+                  updateProgress(res.updatedProgress);
                 }
                 setCompletionResponse({
                   pass: res.pass,
                   xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
                 });
               } catch (err) {
-                console.error('[ReconstructionEngine] Failed to finish practice session:', err);
+                console.error('[ReconstructionEngine] Failed to complete practice level:', err);
               }
             }
           }
         }
       } else {
-        // Finish session automatically if rounds are complete
-        if (newAttemptsCount >= totalRounds && session?.access_token && !sessionFinished) {
-          const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+        // Complete level automatically if rounds are complete
+        if (newAttemptsCount >= totalRounds && session?.access_token) {
           try {
-            setSessionFinished(true);
             const finalScore = isCorrect ? score + 1 : score;
-            const res = await finishPracticeSession(session.access_token, sessionId, durationMs, true);
-            console.log('[ReconstructionEngine] Practice session finished successfully');
-            if (res && res.progress) {
-              updateProgress(res.progress);
+            const res = await completePracticeLevel(session.access_token, {
+              stage: config.stage,
+              level: config.level,
+              totalQuestions: totalRounds,
+              correctAnswers: finalScore,
+              isCompletedSuccessfully: true
+            });
+            console.log('[ReconstructionEngine] Practice level completed successfully');
+            if (res && res.updatedProgress) {
+              updateProgress(res.updatedProgress);
             }
             setCompletionResponse({
               pass: res.pass,
               xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
             });
           } catch (err) {
-            console.error('[ReconstructionEngine] Failed to finish practice session:', err);
+            console.error('[ReconstructionEngine] Failed to complete practice level:', err);
           }
         }
       }
@@ -1013,10 +982,9 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                       onClick={() => {
                         setScore(0);
                         setAttempts(0);
-                        setSessionId(null);
-                        setSessionStartTime(null);
-                        setSessionFinished(false);
                         setCompletionResponse(null);
+                        setSessionId(crypto.randomUUID());
+                        setAttemptStartTime(null);
                         if (isOrderedLengthProgression && !isLevelCompletedBefore) {
                           saveProgress(config.minLength, 0);
                           setSequenceLength(config.minLength);
@@ -1024,7 +992,6 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                         } else {
                           startNewRound(sequenceLength);
                         }
-                        initSession();
                       }}
                       className="flex-1 py-2.5 rounded-xl font-bold bg-white/10 hover:bg-white/15 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer"
                     >
@@ -1035,10 +1002,9 @@ export default function ReconstructionEngine({ config, onBack, onNext, onHome, o
                         onClick={() => {
                           setScore(0);
                           setAttempts(0);
-                          setSessionId(null);
-                          setSessionStartTime(null);
-                          setSessionFinished(false);
                           setCompletionResponse(null);
+                          setSessionId(crypto.randomUUID());
+                          setAttemptStartTime(null);
                           onNext();
                         }}
                         className="flex-1 py-2.5 rounded-xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white flex items-center justify-center gap-1.5 transition-all text-xs cursor-pointer shadow-md shadow-primary-600/20"

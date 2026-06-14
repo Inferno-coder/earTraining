@@ -14,10 +14,17 @@ export interface UserProgress {
   updated_at?: string;
 }
 
-export interface FinishSessionResponse {
-  session: any;
+export interface CompleteLevelPayload {
+  stage: number;
+  level: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  isCompletedSuccessfully?: boolean;
+}
+
+export interface CompleteLevelResponse {
   pass: boolean;
-  progress: UserProgress;
+  updatedProgress: UserProgress;
 }
 
 export interface LogAttemptPayload {
@@ -31,23 +38,25 @@ export interface LogAttemptPayload {
   responseTimeMs: number | null;
 }
 
-export const startPracticeSession = async (token: string, stage: number, level: number): Promise<string> => {
-  const response = await fetch(`${backendUrl}/api/practice/session/start`, {
+export const completePracticeLevel = async (
+  token: string,
+  payload: CompleteLevelPayload
+): Promise<CompleteLevelResponse> => {
+  const response = await fetch(`${backendUrl}/api/practice/level/complete`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ stage, level }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to start practice session: ${response.statusText}`);
+    throw new Error(errorData.error || `Failed to complete practice level: ${response.statusText}`);
   }
 
-  const data = await response.json();
-  return data.sessionId;
+  return await response.json();
 };
 
 export const logPracticeAttempt = async (token: string, payload: LogAttemptPayload): Promise<any> => {
@@ -63,29 +72,6 @@ export const logPracticeAttempt = async (token: string, payload: LogAttemptPaylo
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `Failed to log practice attempt: ${response.statusText}`);
-  }
-
-  return await response.json();
-};
-
-export const finishPracticeSession = async (
-  token: string,
-  sessionId: string,
-  durationMs: number,
-  isCompletedSuccessfully?: boolean
-): Promise<FinishSessionResponse> => {
-  const response = await fetch(`${backendUrl}/api/practice/session/finish`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ sessionId, durationMs, isCompletedSuccessfully }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `Failed to finish practice session: ${response.statusText}`);
   }
 
   return await response.json();

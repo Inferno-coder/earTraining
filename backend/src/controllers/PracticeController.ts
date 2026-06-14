@@ -1,33 +1,15 @@
 import type { Request, Response } from 'express';
+import { UserProgressService } from '../services/UserProgressService';
 import { PracticeService } from '../services/PracticeService';
 
 export class PracticeController {
-  private service: PracticeService;
+  private progressService: UserProgressService;
+  private practiceService: PracticeService;
 
   constructor() {
-    this.service = new PracticeService();
+    this.progressService = new UserProgressService();
+    this.practiceService = new PracticeService();
   }
-
-  /**
-   * Endpoint handler for POST /api/practice/session/start
-   */
-  startSession = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        res.status(401).json({ error: 'Unauthorized: Authenticated user context not found' });
-        return;
-      }
-
-      const { stage, level } = req.body;
-      const sessionId = await this.service.startSession(userId, Number(stage), Number(level));
-      
-      res.status(201).json({ sessionId });
-    } catch (error: any) {
-      console.error('[PracticeController] startSession Error:', error.message);
-      res.status(400).json({ error: error.message });
-    }
-  };
 
   /**
    * Endpoint handler for POST /api/practice/attempt
@@ -40,7 +22,7 @@ export class PracticeController {
         return;
       }
 
-      const result = await this.service.logAttempt(userId, req.body);
+      const result = await this.practiceService.logAttempt(userId, req.body);
       res.status(201).json(result);
     } catch (error: any) {
       console.error('[PracticeController] saveAttempt Error:', error.message);
@@ -49,9 +31,9 @@ export class PracticeController {
   };
 
   /**
-   * Endpoint handler for POST /api/practice/session/finish
+   * Endpoint handler for POST /api/practice/level/complete
    */
-  finishSession = async (req: Request, res: Response): Promise<void> => {
+  completeLevel = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.id;
       if (!userId) {
@@ -59,12 +41,24 @@ export class PracticeController {
         return;
       }
 
-      const { sessionId, durationMs, isCompletedSuccessfully } = req.body;
-      const result = await this.service.finishSession(userId, sessionId, Number(durationMs), isCompletedSuccessfully);
+      const { stage, level, totalQuestions, correctAnswers, isCompletedSuccessfully } = req.body;
+      if (stage === undefined || level === undefined || totalQuestions === undefined || correctAnswers === undefined) {
+        res.status(400).json({ error: 'Bad Request: Missing required parameters to complete practice level' });
+        return;
+      }
+
+      const result = await this.progressService.processLevelCompletion(
+        userId,
+        Number(stage),
+        Number(level),
+        Number(totalQuestions),
+        Number(correctAnswers),
+        isCompletedSuccessfully
+      );
       
       res.status(200).json(result);
     } catch (error: any) {
-      console.error('[PracticeController] finishSession Error:', error.message);
+      console.error('[PracticeController] completeLevel Error:', error.message);
       res.status(400).json({ error: error.message });
     }
   };

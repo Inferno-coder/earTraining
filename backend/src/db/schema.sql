@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.practice_sessions (
 
 CREATE TABLE IF NOT EXISTS public.practice_attempts (
     id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES public.practice_sessions(id) ON DELETE CASCADE,
+    session_id UUID,
     user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
     stage INTEGER NOT NULL,
     level INTEGER NOT NULL,

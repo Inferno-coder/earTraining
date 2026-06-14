@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Volume2, RefreshCw, CheckCircle, AlertCircle, Pl
 import { playNote } from '../../utils/audio';
 import type { QuizConfig } from './configs/types';
 import { useAuth } from '../../auth/useAuth';
-import { startPracticeSession, logPracticeAttempt, finishPracticeSession } from '../../lib/api';
+import { completePracticeLevel, logPracticeAttempt } from '../../lib/api';
 import LevelSelector from './LevelSelector';
 
 interface KeyboardKey {
@@ -62,17 +62,14 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
   // Auth & API states
   const { session, updateProgress, progress } = useAuth();
 
-  const handleLevelChange = async (stage: number, level: number) => {
-    await endSession();
+  const handleLevelChange = (stage: number, level: number) => {
     if (onChangeLevel) {
       onChangeLevel(stage, level);
     }
   };
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
-  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
-  const [sessionFinished, setSessionFinished] = useState<boolean>(false);
   const [completionResponse, setCompletionResponse] = useState<{ pass: boolean; xpGained?: number } | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
 
   // Sound states
   const [activeNote, setActiveNote] = useState<string | null>(null);
@@ -175,46 +172,15 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
     config
   ]);
 
-  const initSession = async () => {
-    if (!session?.access_token) return;
-    try {
-      const sid = await startPracticeSession(session.access_token, config.stage, config.level);
-      setSessionId(sid);
-      setSessionStartTime(Date.now());
-      setSessionFinished(false);
-    } catch (err) {
-      console.error('[QuizEngine] Failed to start practice session:', err);
-    }
-  };
-
-  const endSession = async () => {
-    if (session?.access_token && sessionId && sessionStartTime && !sessionFinished) {
-      const durationMs = Date.now() - sessionStartTime;
-      try {
-        setSessionFinished(true);
-        const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
-        console.log('[QuizEngine] Practice session finished successfully');
-        if (res && res.progress) {
-          updateProgress(res.progress);
-        }
-      } catch (err) {
-        console.error('[QuizEngine] Failed to finish practice session on navigation:', err);
-      }
-    }
-  };
-
-  const handleBack = async () => {
-    await endSession();
+  const handleBack = () => {
     onBack();
   };
 
-  const handleHome = async () => {
-    await endSession();
+  const handleHome = () => {
     onHome();
   };
 
-  const handleNext = async () => {
-    await endSession();
+  const handleNext = () => {
     if (onNext) onNext();
   };
 
@@ -286,7 +252,7 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
 
   // Handle choice selection
   const handleSelectChoice = async (guess: string) => {
-    if (!targetNote || feedback.status !== 'idle' || isPlaying || !sessionId) return;
+    if (!targetNote || feedback.status !== 'idle' || isPlaying) return;
 
     setSelectedGuess(guess);
     const newAttemptsCount = attempts + 1;
@@ -307,8 +273,12 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
 
     if (session?.access_token) {
       try {
+        const activeSessionId = sessionId || crypto.randomUUID();
+        if (!sessionId) {
+          setSessionId(activeSessionId);
+        }
         await logPracticeAttempt(session.access_token, {
-          sessionId,
+          sessionId: activeSessionId,
           stage: config.stage,
           level: config.level,
           questionType: 'QUIZ_GUESS',
@@ -323,22 +293,25 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
     }
 
     const totalRounds = quizDeck.length || 10;
-    if (newAttemptsCount >= totalRounds && session?.access_token && !sessionFinished) {
-      const durationMs = sessionStartTime ? now - sessionStartTime : 0;
+    if (newAttemptsCount >= totalRounds && session?.access_token) {
       try {
-        setSessionFinished(true);
         const finalScore = isCorrect ? score + 1 : score;
-        const res = await finishPracticeSession(session.access_token, sessionId, durationMs);
-        console.log('[QuizEngine] Practice session finished successfully');
-        if (res && res.progress) {
-          updateProgress(res.progress);
+        const res = await completePracticeLevel(session.access_token, {
+          stage: config.stage,
+          level: config.level,
+          totalQuestions: totalRounds,
+          correctAnswers: finalScore
+        });
+        console.log('[QuizEngine] Level completed successfully');
+        if (res && res.updatedProgress) {
+          updateProgress(res.updatedProgress);
         }
         setCompletionResponse({
           pass: res.pass,
           xpGained: (finalScore * 10) + (res.pass ? 50 : 0)
         });
       } catch (err) {
-        console.error('[QuizEngine] Failed to finish practice session:', err);
+        console.error('[QuizEngine] Failed to complete practice level:', err);
       }
     }
   };
@@ -350,12 +323,9 @@ export default function QuizEngine({ config, onBack, onNext, onHome, onChangeLev
     setSelectedGuess(null);
     setFeedback({ status: 'idle', message: '' });
     setQuizDeck(config.generateDeck());
-    setSessionId(null);
-    setSessionStartTime(null);
-    setAttemptStartTime(null);
-    setSessionFinished(false);
     setCompletionResponse(null);
-    initSession();
+    setSessionId(crypto.randomUUID());
+    setAttemptStartTime(null);
   };
 
   // Determine standard grid column class

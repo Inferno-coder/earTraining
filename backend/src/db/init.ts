@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.practice_sessions (
 
 CREATE TABLE IF NOT EXISTS public.practice_attempts (
     id UUID PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES public.practice_sessions(id) ON DELETE CASCADE,
+    session_id UUID,
     user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
     stage INTEGER NOT NULL,
     level INTEGER NOT NULL,
@@ -70,6 +70,10 @@ export async function initializeDatabase() {
 
     // Run combined schema creation script
     await pool.query(schema);
+
+    // Migration: drop foreign key constraint on practice_attempts.session_id if exists, and make it nullable
+    await pool.query("ALTER TABLE public.practice_attempts DROP CONSTRAINT IF EXISTS practice_attempts_session_id_fkey");
+    await pool.query("ALTER TABLE public.practice_attempts ALTER COLUMN session_id DROP NOT NULL");
 
     // Migration: ensure reconstruction_states column exists in user_progress table
     await pool.query("ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS reconstruction_states JSONB NOT NULL DEFAULT '{}'::jsonb");

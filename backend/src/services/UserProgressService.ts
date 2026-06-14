@@ -90,15 +90,13 @@ export class UserProgressService {
 
   /**
    * Performs the mathematical calculations for progression and updates the database row.
-   * Can accept a specific PoolClient to run inside an active database transaction.
    */
-  async processSessionEnd(
+  async processLevelCompletion(
     userId: string,
     stage: number,
     level: number,
     totalQuestions: number,
     correctAnswers: number,
-    client: PoolClient,
     isCompletedSuccessfully?: boolean
   ): Promise<{ pass: boolean; updatedProgress: UserProgress }> {
     // 1. Fetch current progress
@@ -142,8 +140,8 @@ export class UserProgressService {
       }
     }
 
-    // 6. Update database row (using the transaction client if available)
-    const result = await this.repository.updateInTransaction(client, updated);
+    // 6. Update database row using standard update
+    const result = await this.repository.update(updated);
 
     return {
       pass,
