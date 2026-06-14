@@ -5,19 +5,6 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS public.practice_sessions (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
-    stage INTEGER NOT NULL,
-    level INTEGER NOT NULL,
-    started_at TIMESTAMPTZ NOT NULL,
-    completed_at TIMESTAMPTZ,
-    duration_ms INTEGER,
-    total_questions INTEGER,
-    correct_answers INTEGER,
-    accuracy NUMERIC
-);
-
 CREATE TABLE IF NOT EXISTS public.practice_attempts (
     id UUID PRIMARY KEY,
     session_id UUID,
