@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Play, 
-  Square, 
-  X, 
-  Sliders 
+import {
+  Play,
+  Square,
+  X,
+  Sliders
 } from 'lucide-react';
 import { playNote, initAudio } from '../utils/audio';
 
@@ -48,7 +48,7 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
   const [currentlyPlayingNote, setCurrentlyPlayingNote] = useState<string | null>(null);
 
   const loopTimeoutRef = useRef<any>(null);
-  
+
   // Use a ref to store the latest state variables for the loop timeout function
   const stateRef = useRef({
     selectedNotes: [] as string[],
@@ -131,7 +131,7 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
 
   const startLooping = async () => {
     if (selectedNotes.length === 0) return;
-    
+
     stopLooping();
     await initAudio();
     setIsLooping(true);
@@ -174,10 +174,10 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
       {/* Backdrop click to close */}
       <div className="absolute inset-0 cursor-pointer" onClick={handleClose} />
-      
+
       {/* Modal Card */}
       <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative shadow-2xl z-10 animate-fade-in-up">
-        
+
         {/* Header */}
         <div className="p-6 border-b border-white/5 flex justify-between items-start">
           <div className="flex items-center gap-3">
@@ -186,14 +186,14 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
             </div>
             <div className="text-left">
               <h3 className="text-xl font-extrabold text-white flex items-center gap-2">
-                Custom Practice Room
+                Custom Hearing Practice
               </h3>
               <p className="text-gray-400 text-xs mt-1 leading-relaxed">
                 Design custom swara scales, configure playback speed, and loop patterns.
               </p>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleClose}
             className="bg-white/5 hover:bg-white/10 border border-white/10 p-2 rounded-xl text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
@@ -203,7 +203,7 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          
+
           {/* Swara Selection Header & Utilities */}
           <div className="space-y-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -243,13 +243,12 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
                     <button
                       key={key.note}
                       onClick={() => toggleNote(key.note)}
-                      className={`flex-1 h-full rounded-b-xl flex flex-col justify-end items-center pb-3 transition-all duration-150 cursor-pointer ${
-                        isPlaying
-                          ? 'bg-amber-400 border-t-4 border-amber-500 pt-0 text-slate-950 translate-y-0.5 shadow-none'
-                          : isSelected
+                      className={`flex-1 h-full rounded-b-xl flex flex-col justify-end items-center pb-3 transition-all duration-150 cursor-pointer ${isPlaying
+                        ? 'bg-amber-400 border-t-4 border-amber-500 pt-0 text-slate-950 translate-y-0.5 shadow-none'
+                        : isSelected
                           ? 'bg-indigo-600/30 border-b-[6px] border-indigo-500 text-white border-t border-indigo-400/20 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
                           : 'bg-white hover:bg-slate-50 border-b-[6px] border-slate-300 text-slate-800'
-                      }`}
+                        }`}
                     >
                       <span className="block text-sm md:text-base font-extrabold font-serif leading-none">
                         {key.label}
@@ -272,13 +271,12 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
                     key={key.note}
                     onClick={() => toggleNote(key.note)}
                     style={{ left: leftOffset, width: '8.4%' }}
-                    className={`absolute top-4 h-[60%] rounded-b-lg flex flex-col justify-end items-center pb-2 z-20 transition-all duration-150 cursor-pointer ${
-                      isPlaying
-                        ? 'bg-amber-400 border-t-2 border-amber-500 pt-0 text-slate-950 translate-y-0.5 shadow-none'
-                        : isSelected
+                    className={`absolute top-4 h-[60%] rounded-b-lg flex flex-col justify-end items-center pb-2 z-20 transition-all duration-150 cursor-pointer ${isPlaying
+                      ? 'bg-amber-400 border-t-2 border-amber-500 pt-0 text-slate-950 translate-y-0.5 shadow-none'
+                      : isSelected
                         ? 'bg-violet-600 border-b-4 border-violet-850 border-x border-violet-700/50 text-white shadow-[0_0_12px_rgba(139,92,246,0.4)]'
                         : 'bg-slate-900 hover:bg-slate-850 border-b-4 border-black border-x border-slate-800 text-slate-300'
-                    }`}
+                      }`}
                   >
                     <span className="block text-[10px] md:text-xs font-bold font-serif leading-none">
                       {key.label}
@@ -307,11 +305,10 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
                     setSpeed(s.id as any);
                     setSpeedMs(s.ms);
                   }}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
-                    speed === s.id
-                      ? 'bg-primary-600 border border-primary-500 text-white shadow-inner'
-                      : 'bg-white/5 border border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                  }`}
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${speed === s.id
+                    ? 'bg-primary-600 border border-primary-500 text-white shadow-inner'
+                    : 'bg-white/5 border border-white/5 text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                    }`}
                 >
                   {s.label}
                 </button>
@@ -329,7 +326,7 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
                 <p className="text-xs text-gray-400 leading-normal">Play selected swaras repeatedly at current tempo speed.</p>
               )}
             </div>
-            
+
             <div className="w-full sm:w-auto shrink-0">
               {isLooping ? (
                 <button
@@ -343,11 +340,10 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
                 <button
                   onClick={startLooping}
                   disabled={selectedNotes.length === 0}
-                  className={`w-full sm:px-8 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    selectedNotes.length === 0
-                      ? 'bg-white/5 border border-white/5 text-gray-655 cursor-not-allowed'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20'
-                  }`}
+                  className={`w-full sm:px-8 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${selectedNotes.length === 0
+                    ? 'bg-white/5 border border-white/5 text-gray-655 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20'
+                    }`}
                 >
                   <Play className="w-4 h-4 fill-current" />
                   Start Loop
@@ -368,11 +364,10 @@ export default function CustomPracticeModal({ isOpen, onClose }: CustomPracticeM
                   return (
                     <div
                       key={`${note}-${idx}`}
-                      className={`px-3 py-1.5 rounded-xl border text-[11px] font-semibold flex items-center gap-2 transition-all ${
-                        isPlaying
-                          ? 'bg-amber-400 border-amber-500 text-slate-950 font-bold scale-[1.04]'
-                          : 'bg-white/5 border-white/5 text-gray-300'
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl border text-[11px] font-semibold flex items-center gap-2 transition-all ${isPlaying
+                        ? 'bg-amber-400 border-amber-500 text-slate-950 font-bold scale-[1.04]'
+                        : 'bg-white/5 border-white/5 text-gray-300'
+                        }`}
                     >
                       <span className="font-serif text-xs font-bold">{swara.label}</span>
                       <span className="opacity-70 font-sans">({swara.carnaticName})</span>

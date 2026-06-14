@@ -166,7 +166,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
           >
             <Sliders className="w-4 h-4 text-indigo-400" />
-            Custom Practice
+            Custom Hearing Practice
           </button>
         </nav>
 
@@ -284,7 +284,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
                 className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold border border-white/10 text-white shadow-lg transition-all scale-100 hover:scale-[1.03] cursor-pointer btn-practice-gradient group"
               >
                 <Sliders className="w-4 h-4 group-hover:rotate-45 transition-transform" />
-                Custom Practice Room
+                Custom Hearning Practice
               </button>
 
               <button
