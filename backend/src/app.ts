@@ -45,8 +45,21 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   });
 });
 
-// Start the Express server
-app.listen(port, async () => {
-  await initializeDatabase();
-  console.log(`[server]: ClearEar Studio backend running at http://localhost:${port}`);
-});
+// Check if running on Vercel Serverless environment
+const isVercel = process.env.VERCEL === '1';
+
+if (!isVercel) {
+  // Start the Express server
+  app.listen(port, async () => {
+    await initializeDatabase();
+    console.log(`[server]: ClearEar Studio backend running at http://localhost:${port}`);
+  });
+} else {
+  // In Vercel serverless environment, initialize database immediately on startup
+  initializeDatabase().catch((err) => {
+    console.error('[Database Init Error]: Failed to initialize database on Vercel:', err);
+  });
+}
+
+export default app;
+
