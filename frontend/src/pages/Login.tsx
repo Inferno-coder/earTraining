@@ -151,9 +151,17 @@ export const Login: React.FC = () => {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-xs font-semibold text-gray-300 font-mono uppercase tracking-wider block">
-                Password
-              </label>
+              <div className="flex justify-between items-center">
+                <label htmlFor="password" className="text-xs font-semibold text-gray-300 font-mono uppercase tracking-wider block">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-primary-400 hover:text-primary-300 font-semibold transition-colors underline underline-offset-4 decoration-primary-500/30"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   id="password"
