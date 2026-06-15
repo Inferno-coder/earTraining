@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON public.practice_attempts (user_id);
 `;
 
 /**
@@ -67,6 +69,9 @@ export async function initializeDatabase() {
 
     // Migration: ensure reconstruction_states column exists in user_progress table
     await pool.query("ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS reconstruction_states JSONB NOT NULL DEFAULT '{}'::jsonb");
+
+    // Migration: ensure index on practice_attempts.user_id exists
+    await pool.query("CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON public.practice_attempts (user_id)");
 
     console.log('[Database Init]: Core backend tables verified and ready.');
   } catch (error: any) {

@@ -45,6 +45,13 @@ export class PracticeService {
       response_time_ms: responseTimeMs,
     };
 
-    return await this.repository.saveAttempt(attempt);
+    const savedAttempt = await this.repository.saveAttempt(attempt);
+
+    // Prune old attempts in the background (fire-and-forget) to keep the API fast and responsive
+    this.repository.pruneOldAttempts(userId).catch((err) => {
+      console.error('[PracticeService] Background pruning error:', err);
+    });
+
+    return savedAttempt;
   }
 }

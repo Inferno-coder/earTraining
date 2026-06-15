@@ -32,4 +32,35 @@ export class PracticeRepository {
       throw new Error(`DB Error [saveAttempt]: ${error.message}`);
     }
   }
+
+  /**
+   * Enforces the 500-attempt limit per user by deleting the 100 oldest records if total exceeds 500
+   */
+  async pruneOldAttempts(userId: string): Promise<void> {
+    try {
+      // 1. Get the current count of practice attempts for this user
+      const countQuery = 'SELECT COUNT(*) FROM practice_attempts WHERE user_id = $1';
+      const { rows } = await pool.query(countQuery, [userId]);
+      const count = parseInt(rows[0].count, 10);
+
+      // 2. If the count exceeds 500, delete the oldest 100 records
+      if (count > 500) {
+        console.log(`[PracticeRepository]: User ${userId} has ${count} attempts (limit: 500). Pruning oldest 100 records.`);
+        const deleteQuery = `
+          DELETE FROM practice_attempts
+          WHERE id IN (
+            SELECT id FROM practice_attempts
+            WHERE user_id = $1
+            ORDER BY created_at ASC
+            LIMIT 100
+          )
+        `;
+        await pool.query(deleteQuery, [userId]);
+      }
+    } catch (error: any) {
+      // Log the error but don't fail the main request
+      console.error(`[PracticeRepository] Error pruning old attempts: ${error.message}`);
+    }
+  }
 }
+

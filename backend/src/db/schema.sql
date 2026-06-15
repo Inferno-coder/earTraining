@@ -32,3 +32,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index for performance optimization when querying/pruning practice attempts by user_id
+CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON public.practice_attempts (user_id);
+
