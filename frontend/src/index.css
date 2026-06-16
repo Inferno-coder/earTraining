@@ -317,4 +317,37 @@ body {
   animation: spin-slow 8s linear infinite;
 }
 
+/* Infinite scrolling marquee utilities */
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left var(--marquee-duration, 40s) linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marquee-right var(--marquee-duration, 40s) linear infinite;
+}
+
+.pause-hover:hover .animate-marquee-left,
+.pause-hover:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
+
+
 

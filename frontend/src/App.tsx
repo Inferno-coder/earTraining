@@ -6,6 +6,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import { useAuth } from './auth/useAuth';
 import LandingPage from './components/LandingPage';
+import Contact from './pages/Contact';
+import AdminDashboard from './pages/AdminDashboard';
 import Stage1Level0 from './components/levels/configs/s1l0';
 import QuizEngine from './components/levels/QuizEngine';
 import StageTransition from './components/levels/StageTransition';
@@ -107,6 +109,8 @@ function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/*" element={<AppContent />} />
     </Routes>
   );

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Music,
   ArrowRight,
+  ChevronLeft,
   ChevronRight,
   Shield,
   Sliders,
@@ -12,11 +13,24 @@ import {
   Award,
   Sparkles,
   User,
-  LogOut
+  LogOut,
+  Mail,
+  Star
 } from 'lucide-react';
 import CustomPracticeModal from './CustomPracticeModal';
 import EditProfileModal from './EditProfileModal';
 import { useAuth } from '../auth/useAuth';
+
+interface Testimonial {
+  name: string;
+  role: string;
+  quote: string;
+  rating: number;
+  avatar: string;
+  color: string;
+}
+
+
 
 
 type RagaName = 'Mayamalavagowla' | 'Shankarabharanam' | 'Kharaharapriya' | 'Kalyani';
@@ -99,6 +113,75 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState(1);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'marquee' | 'carousel' | 'grid'>('marquee');
+  const [selectedTestimonial, setSelectedTestimonial] = useState<Testimonial | null>(null);
+
+  const nextSlide = () => {
+    if (testimonials.length <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+  };
+
+  const prevSlide = () => {
+    if (testimonials.length <= 1) return;
+    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+  };
+
+  // Auto-play testimonials slider (only active in carousel mode)
+  useEffect(() => {
+    if (testimonials.length <= 1 || viewMode !== 'carousel') return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [testimonials, viewMode]);
+
+  // Fetch approved testimonials from database
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+        const response = await fetch(`${backendUrl}/api/contact/testimonials`);
+        if (response.ok) {
+          const dbTestimonials = await response.json();
+          if (dbTestimonials && dbTestimonials.length > 0) {
+            const mapped = dbTestimonials.map((dbT: any, idx: number) => {
+              const avatars = ['A', 'M', 'R', 'S', 'K', 'P'];
+              const colors = [
+                'from-primary-500 to-indigo-500',
+                'from-accent-rose to-pink-500',
+                'from-accent-amber to-orange-500',
+                'from-emerald-500 to-teal-500',
+                'from-blue-500 to-sky-500',
+              ];
+              return {
+                name: dbT.name,
+                role: dbT.category === 'ThankYou' ? 'Verified User' : 'Student Feedback',
+                quote: dbT.message,
+                rating: 5,
+                avatar: dbT.name ? dbT.name[0].toUpperCase() : avatars[idx % avatars.length],
+                color: colors[idx % colors.length]
+              };
+            });
+            setTestimonials(mapped);
+            // Auto-adjust default view mode based on length
+            if (mapped.length > 5) {
+              setViewMode('marquee');
+            } else if (mapped.length > 3) {
+              setViewMode('carousel');
+            } else {
+              setViewMode('grid');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching dynamic testimonials:', err);
+      }
+    };
+
+    fetchTestimonials();
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -131,6 +214,52 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
     }
   };
 
+  const renderTestimonialCard = (t: Testimonial, idx: number, customWidthClass = "w-full") => {
+    const isLong = t.quote.length > 150;
+    return (
+      <div
+        key={`${t.name}-${idx}`}
+        onClick={() => setSelectedTestimonial(t)}
+        className={`glass rounded-3xl p-6 border-white/5 relative overflow-hidden transition-all duration-300 hover:border-primary-500/20 hover:shadow-xl hover:shadow-primary-600/5 hover:-translate-y-1 select-none flex flex-col justify-between cursor-pointer group/card shrink-0 text-left h-[260px] ${customWidthClass}`}
+      >
+        {/* Large Background Quote Symbol */}
+        <span className="absolute -top-4 -left-2 text-primary-500/5 font-serif text-[8rem] leading-none select-none pointer-events-none">“</span>
+
+        {/* Top half: Rating + Quote */}
+        <div className="space-y-3 relative z-10">
+          <div className="flex gap-0.5">
+            {Array.from({ length: t.rating || 5 }).map((_, i) => (
+              <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            ))}
+          </div>
+          <div>
+            <p className="text-gray-300 text-xs md:text-sm italic font-serif leading-relaxed line-clamp-4">
+              "{t.quote}"
+            </p>
+            {isLong && (
+              <span className="text-[10px] font-mono font-semibold text-primary-400 group-hover/card:text-primary-300 transition-colors mt-1.5 inline-flex items-center gap-0.5">
+                Read More <Sparkles className="w-2.5 h-2.5 animate-pulse" />
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom half: User info */}
+        <div className="flex items-center gap-3 pt-4 border-t border-white/5 relative z-10">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${t.color} p-[1.5px] shadow-md`}>
+            <div className="w-full h-full rounded-xl bg-slate-950 flex items-center justify-center font-bold text-white uppercase text-xs font-serif">
+              {t.avatar}
+            </div>
+          </div>
+          <div className="truncate">
+            <h4 className="text-xs font-bold text-white truncate group-hover/card:text-primary-300 transition-colors">{t.name}</h4>
+            <span className="block text-[9px] font-mono text-gray-500 truncate">{t.role}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-primary-500 selection:text-white">
 
@@ -153,7 +282,6 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
-          <a href="#features" className="hover:text-white transition-colors">Features</a>
           <button
             onClick={() => setShowCurriculumModal(true)}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
@@ -161,12 +289,22 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <BookOpen className="w-4 h-4 text-primary-400" />
             Curriculum
           </button>
+          {testimonials.length > 0 && (
+            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
+          )}
           <button
             onClick={handleCustomPractice}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
           >
             <Sliders className="w-4 h-4 text-indigo-400" />
             Custom Hearing Practice
+          </button>
+          <button
+            onClick={() => navigate('/contact')}
+            className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium text-accent-amber"
+          >
+            <Mail className="w-4 h-4" />
+            Contact
           </button>
         </nav>
 
@@ -561,6 +699,182 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           </div>
         </section>
 
+        {/* Testimonials Section */}
+        {testimonials.length > 0 && (
+          <section id="testimonials" className="space-y-12">
+            <div className="text-center max-w-3xl mx-auto space-y-4">
+              <span className="text-xs font-mono text-primary-400 uppercase tracking-widest font-bold block">Testimonials</span>
+              <h2 className="text-3xl md:text-4xl font-extrabold">What Musicians Say</h2>
+              <p className="text-gray-400 text-sm md:text-base leading-relaxed">
+                Hear from vocalists, string players, and music teachers who have refined their pitch discrimination and classical hearing precision in the laboratory.
+              </p>
+            </div>
+
+            {/* View Mode Switcher */}
+            {testimonials.length > 3 && (
+              <div className="flex justify-center">
+                <div className="inline-flex p-1 bg-slate-950/80 border border-white/10 rounded-2xl relative shadow-inner">
+                  {[
+                    { id: 'marquee', label: 'Flowing Track' },
+                    { id: 'carousel', label: 'Focus Slide' },
+                    { id: 'grid', label: 'Compact Grid' }
+                  ].map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setViewMode(mode.id as any)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer ${viewMode === mode.id
+                        ? 'bg-primary-600 text-white shadow-md shadow-primary-700/20'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* View Renderers */}
+            {viewMode === 'marquee' && (
+              <div className="space-y-6 pause-hover relative py-4">
+                {/* Horizontal Gradient Edge Masks */}
+                <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-[#05070c] via-[#05070c]/50 to-transparent z-20 pointer-events-none"></div>
+                <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-[#05070c] via-[#05070c]/50 to-transparent z-20 pointer-events-none"></div>
+
+                {(() => {
+                  const isDualRow = testimonials.length > 5;
+                  const row1 = isDualRow ? testimonials.filter((_, i) => i % 2 === 0) : testimonials;
+                  const row2 = isDualRow ? testimonials.filter((_, i) => i % 2 !== 0) : [];
+                  const doubleRow1 = [...row1, ...row1];
+                  const doubleRow2 = [...row2, ...row2];
+
+                  return (
+                    <>
+                      {/* Row 1: left marquee */}
+                      <div className="w-full overflow-hidden">
+                        <div
+                          className="flex gap-6 w-max animate-marquee-left"
+                          style={{ '--marquee-duration': `${Math.max(row1.length * 8, 20)}s` } as any}
+                        >
+                          {doubleRow1.map((t, idx) => renderTestimonialCard(t, idx, "w-[280px] md:w-[320px]"))}
+                        </div>
+                      </div>
+
+                      {/* Row 2: right marquee */}
+                      {isDualRow && row2.length > 0 && (
+                        <div className="w-full overflow-hidden">
+                          <div
+                            className="flex gap-6 w-max animate-marquee-right"
+                            style={{ '--marquee-duration': `${Math.max(row2.length * 8, 20)}s` } as any}
+                          >
+                            {doubleRow2.map((t, idx) => renderTestimonialCard(t, idx, "w-[280px] md:w-[320px]"))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {viewMode === 'carousel' && (
+              <div className="max-w-xl mx-auto relative px-4 md:px-12 group/carousel animate-fade-in">
+                {renderTestimonialCard(testimonials[currentIndex], currentIndex, "w-full")}
+
+                {/* Navigation Arrows */}
+                {testimonials.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevSlide}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 w-10 h-10 rounded-xl glass border-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 hover:border-primary-500/30 transition-all cursor-pointer shadow-lg z-20"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <button
+                      onClick={nextSlide}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 w-10 h-10 rounded-xl glass border-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 hover:border-primary-500/30 transition-all cursor-pointer shadow-lg z-20"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+
+                {/* Indicators */}
+                {testimonials.length > 1 && (
+                  <div className="flex justify-center gap-1.5 mt-6">
+                    {testimonials.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${currentIndex === idx ? 'w-5 bg-primary-500' : 'w-1.5 bg-white/10 hover:bg-white/30'
+                          }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in max-w-6xl mx-auto px-4">
+                {testimonials.map((t, idx) => renderTestimonialCard(t, idx, "w-full"))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Testimonial Details Modal */}
+        {selectedTestimonial && (
+          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 cursor-pointer"
+              onClick={() => setSelectedTestimonial(null)}
+            />
+
+            <div className="bg-[#0b0f19] border border-white/10 rounded-3xl w-full max-w-lg p-6 md:p-8 relative shadow-2xl z-10 animate-scale-up text-left">
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedTestimonial(null)}
+                className="absolute top-4 right-4 bg-white/5 hover:bg-white/10 border border-white/10 p-2 rounded-xl text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Modal Content */}
+              <div className="space-y-6">
+                {/* Rating */}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: selectedTestimonial.rating || 5 }).map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+
+                {/* Large quote marks */}
+                <div className="relative min-h-[100px] flex items-center">
+                  <span className="absolute -top-10 -left-6 text-primary-500/10 font-serif text-[10rem] leading-none select-none pointer-events-none">“</span>
+                  <p className="text-white text-sm md:text-base leading-relaxed italic font-serif relative z-10 pl-2">
+                    {selectedTestimonial.quote}
+                  </p>
+                </div>
+
+                {/* Profile info */}
+                <div className="flex items-center gap-3 pt-6 border-t border-white/5">
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-tr ${selectedTestimonial.color} p-[1.5px] shadow-lg`}>
+                    <div className="w-full h-full rounded-xl bg-slate-950 flex items-center justify-center font-bold text-white uppercase text-xs font-serif">
+                      {selectedTestimonial.avatar}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{selectedTestimonial.name}</h4>
+                    <span className="block text-[10px] font-mono text-gray-500">{selectedTestimonial.role}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* CTA Launch Section */}
         <section id="launch" className="glass rounded-3xl p-8 md:p-16 text-center border-white/5 relative overflow-hidden bg-gradient-to-tr from-slate-950 via-slate-900/60 to-slate-950 shadow-2xl">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-primary-600 filter blur-3xl opacity-10 -z-10"></div>
@@ -591,9 +905,13 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
       <footer className="glass border-t border-white/5 py-12 text-center text-xs text-gray-400 space-y-4 px-6 mt-12">
         <div className="flex justify-center gap-8">
           <a href="#features" className="hover:text-primary-400 transition-colors">Features</a>
+          {testimonials.length > 0 && (
+            <a href="#testimonials" className="hover:text-primary-400 transition-colors">Testimonials</a>
+          )}
           <a href="#raga-explorer" className="hover:text-primary-400 transition-colors">Scales</a>
           <a href="#methodology" className="hover:text-primary-400 transition-colors">Methodology</a>
           <button onClick={() => setShowCurriculumModal(true)} className="hover:text-primary-400 transition-colors">Curriculum</button>
+          <button onClick={() => navigate('/contact')} className="hover:text-primary-400 transition-colors cursor-pointer bg-transparent border-none p-0">Contact</button>
           <a href="#" className="hover:text-primary-400 transition-colors flex items-center gap-1 font-sans"><Shield className="w-3.5 h-3.5" /> Privacy</a>
         </div>
         <p>© 2026 ClearEar Studio. Empowering Indian Classical Music Ear Training.</p>

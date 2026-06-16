@@ -34,6 +34,16 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.contact_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    category TEXT NOT NULL,
+    message TEXT NOT NULL,
+    approved BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON public.practice_attempts (user_id);
 `;
 
@@ -69,6 +79,9 @@ export async function initializeDatabase() {
 
     // Migration: ensure reconstruction_states column exists in user_progress table
     await pool.query("ALTER TABLE public.user_progress ADD COLUMN IF NOT EXISTS reconstruction_states JSONB NOT NULL DEFAULT '{}'::jsonb");
+
+    // Migration: ensure approved column exists in contact_messages table
+    await pool.query("ALTER TABLE public.contact_messages ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT FALSE");
 
     // Migration: ensure index on practice_attempts.user_id exists
     await pool.query("CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_id ON public.practice_attempts (user_id)");

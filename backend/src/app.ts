@@ -6,6 +6,7 @@ import { authMiddleware } from './middleware/auth.middleware';
 import userRoutes from './routes/user.routes';
 import practiceRoutes from './routes/practice.routes';
 import progressRoutes from './routes/progress.routes';
+import contactRoutes from './routes/contact.routes';
 import { initializeDatabase } from './db/init';
 
 // Load environment variables
@@ -28,6 +29,9 @@ app.use('/api/user', progressRoutes);
 
 // Mount practice history routes
 app.use('/api/practice', practiceRoutes);
+
+// Mount contact messages route
+app.use('/api/contact', contactRoutes);
 
 // Public health check route
 app.get('/health', (req, res) => {
