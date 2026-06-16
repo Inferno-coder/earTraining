@@ -77,7 +77,7 @@ export default function OnboardingModal({ isOpen, onClose }: OnboardingModalProp
       title: "Welcome to ClearEar Studio",
       emoji: "🎵",
       description: "Learn to hear. Learn to play.",
-      body: "Develop strong Carnatic music listening skills through interactive relative-pitch exercises and melodic dictations.",
+      body: "Develop your Carnatic listening skills through interactive ear training, swara recognition, and melodic exercises—building the foundation to identify swaras and play melodies by ear.",
       icon: <Music className="w-12 h-12 text-primary-400" />
     },
     {
