@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Music,
@@ -15,10 +16,12 @@ import {
   User,
   LogOut,
   Mail,
-  Star
+  Star,
+  HelpCircle
 } from 'lucide-react';
 import CustomPracticeModal from './CustomPracticeModal';
 import EditProfileModal from './EditProfileModal';
+import OnboardingModal from './OnboardingModal';
 import { useAuth } from '../auth/useAuth';
 
 interface Testimonial {
@@ -113,6 +116,100 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
   const [activeTab, setActiveTab] = useState(1);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const isFirstVisitRef = useRef(false);
+  const [noteState, setNoteState] = useState<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    targetX: number;
+    targetY: number;
+    xKeyframes: number[];
+    yKeyframes: number[];
+  } | null>(null);
+
+  const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number; scale: number }[]>([]);
+  const [helpPulse, setHelpPulse] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('hasSeenOnboarding');
+    console.log('[LandingPage] check onboarding tourCompleted:', tourCompleted);
+    if (!tourCompleted) {
+      console.log('[LandingPage] setting showOnboardingModal to true');
+      isFirstVisitRef.current = true;
+      setShowOnboardingModal(true);
+    }
+  }, []);
+
+  const triggerWelcomeAnimation = () => {
+    const helpBtn = document.getElementById('navbar-help-button');
+    if (!helpBtn) return;
+
+    const rect = helpBtn.getBoundingClientRect();
+    const targetX = rect.left + rect.width / 2;
+    const targetY = rect.top + rect.height / 2;
+
+    const startX = window.innerWidth / 2;
+    const startY = window.innerHeight / 2;
+
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+
+    // Generate a beautiful wave-like Bezier path
+    const xKeyframes = [
+      startX,
+      startX + dx * 0.15 - 120, // sweep left
+      startX + dx * 0.45 + 150, // loop right
+      startX + dx * 0.75 - 80,  // wave left
+      startX + dx * 0.9 + 30,   // swing right
+      targetX
+    ];
+    const yKeyframes = [
+      startY,
+      startY + dy * 0.15 + 80,  // drop down
+      startY + dy * 0.5 - 60,   // sweep up
+      startY + dy * 0.75 + 40,  // dip down
+      targetY - 20,             // align near help
+      targetY
+    ];
+
+    setSparkles([]);
+
+    setNoteState({
+      active: true,
+      startX,
+      startY,
+      targetX,
+      targetY,
+      xKeyframes,
+      yKeyframes
+    });
+  };
+
+  const handleNoteAnimationComplete = () => {
+    setNoteState(null);
+    setHelpPulse(true);
+    setTimeout(() => {
+      setHelpPulse(false);
+    }, 1200);
+
+    // Show tooltip
+    setShowTooltip(true);
+    setTimeout(() => {
+      setShowTooltip(false);
+    }, 3500);
+  };
+
+  const spawnSparkle = (x: number, y: number) => {
+    const newSparkle = {
+      id: Math.random(),
+      x: x + (Math.random() - 0.5) * 20,
+      y: y + (Math.random() - 0.5) * 20,
+      scale: Math.random() * 0.7 + 0.4
+    };
+    setSparkles(prev => [...prev.slice(-12), newSparkle]); // keep max 12 particles for performance
+  };
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'marquee' | 'carousel' | 'grid'>('marquee');
@@ -289,9 +386,6 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <BookOpen className="w-4 h-4 text-primary-400" />
             Curriculum
           </button>
-          {testimonials.length > 0 && (
-            <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
-          )}
           <button
             onClick={handleCustomPractice}
             className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1 font-medium"
@@ -306,6 +400,64 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
             <Mail className="w-4 h-4" />
             Contact
           </button>
+          {/* Help Dropdown */}
+          <div className="relative group/help flex items-center">
+            <motion.button
+              id="navbar-help-button"
+              onClick={() => setShowOnboardingModal(true)}
+              animate={helpPulse ? {
+                scale: [1, 1.15, 0.95, 1.08, 1],
+                boxShadow: [
+                  "0 0 0 rgba(16, 185, 129, 0)",
+                  "0 0 25px rgba(16, 185, 129, 0.8)",
+                  "0 0 5px rgba(16, 185, 129, 0.2)",
+                  "0 0 15px rgba(16, 185, 129, 0.5)",
+                  "0 0 0 rgba(16, 185, 129, 0)"
+                ],
+                backgroundColor: [
+                  "rgba(16, 185, 129, 0)",
+                  "rgba(16, 185, 129, 0.2)",
+                  "rgba(16, 185, 129, 0.05)",
+                  "rgba(16, 185, 129, 0.1)",
+                  "rgba(16, 185, 129, 0)"
+                ]
+              } : {}}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+              className="hover:text-white transition-colors cursor-pointer bg-transparent border border-transparent p-1.5 rounded-xl flex items-center gap-1 font-medium text-gray-300"
+            >
+              <HelpCircle className="w-4 h-4 text-emerald-400" />
+              Help
+            </motion.button>
+            <div className="absolute left-0 top-full mt-2 w-56 bg-[#0c101b] border border-white/10 rounded-xl p-2 shadow-2xl z-50 hidden group-hover/help:block hover:block animate-scale-up">
+              <button
+                onClick={() => setShowOnboardingModal(true)}
+                className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer border-none"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-primary-400" />
+                How ClearEar Works
+              </button>
+            </div>
+
+            {/* Step 8 Tooltip */}
+            <AnimatePresence>
+              {showTooltip && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="absolute top-full right-0 mt-3 w-64 bg-slate-900 border border-emerald-500/35 rounded-2xl p-4 shadow-2xl z-55 text-left font-sans text-xs text-gray-200"
+                >
+                  <div className="flex gap-2 items-start">
+                    <span className="text-emerald-400 shrink-0">💡</span>
+                    <p className="leading-relaxed">
+                      <strong>Need this guide again?</strong> You can reopen it anytime from the Help menu.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -350,6 +502,16 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
 
                   {/* Actions */}
                   <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        setShowOnboardingModal(true);
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2 cursor-pointer border-none text-left"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      How ClearEar Works
+                    </button>
                     <button
                       onClick={() => {
                         setShowProfileDropdown(false);
@@ -704,7 +866,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           <section id="testimonials" className="space-y-12">
             <div className="text-center max-w-3xl mx-auto space-y-4">
               <span className="text-xs font-mono text-primary-400 uppercase tracking-widest font-bold block">Testimonials</span>
-              <h2 className="text-3xl md:text-4xl font-extrabold">What Musicians Say</h2>
+              <h2 className="text-3xl md:text-4xl font-extrabold">What Musicians and Audience Say</h2>
               <p className="text-gray-400 text-sm md:text-base leading-relaxed">
                 Hear from vocalists, string players, and music teachers who have refined their pitch discrimination and classical hearing precision in the laboratory.
               </p>
@@ -912,6 +1074,7 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
           <a href="#methodology" className="hover:text-primary-400 transition-colors">Methodology</a>
           <button onClick={() => setShowCurriculumModal(true)} className="hover:text-primary-400 transition-colors">Curriculum</button>
           <button onClick={() => navigate('/contact')} className="hover:text-primary-400 transition-colors cursor-pointer bg-transparent border-none p-0">Contact</button>
+          <button onClick={() => setShowOnboardingModal(true)} className="hover:text-primary-400 transition-colors cursor-pointer bg-transparent border-none p-0">How It Works</button>
           <a href="#" className="hover:text-primary-400 transition-colors flex items-center gap-1 font-sans"><Shield className="w-3.5 h-3.5" /> Privacy</a>
         </div>
         <p>© 2026 ClearEar Studio. Empowering Indian Classical Music Ear Training.</p>
@@ -1123,6 +1286,70 @@ export default function LandingPage({ onLaunch }: LandingPageProps) {
         isOpen={showEditProfileModal}
         onClose={() => setShowEditProfileModal(false)}
       />
+
+      {/* Onboarding Welcome Tour Modal */}
+      <AnimatePresence>
+        {showOnboardingModal && (
+          <OnboardingModal
+            isOpen={showOnboardingModal}
+            onClose={() => {
+              setShowOnboardingModal(false);
+              if (isFirstVisitRef.current) {
+                isFirstVisitRef.current = false;
+                triggerWelcomeAnimation();
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Musical Note Flying Animation */}
+      {noteState?.active && (
+        <motion.div
+          className="fixed pointer-events-none z-[130] flex items-center justify-center"
+          style={{
+            left: 0,
+            top: 0,
+            width: '40px',
+            height: '40px',
+            margin: '-20px 0 0 -20px',
+          }}
+          animate={{
+            x: noteState.xKeyframes,
+            y: noteState.yKeyframes,
+            scale: [0.3, 1.2, 1.4, 1.1, 1.3, 0], // morph/pulse, then shrink into target
+            rotate: [0, 90, -45, 180, -90, 0],   // playful rotational spin
+          }}
+          onUpdate={(latest) => {
+            if (typeof latest.x === 'number' && typeof latest.y === 'number') {
+              spawnSparkle(latest.x, latest.y);
+            }
+          }}
+          onAnimationComplete={handleNoteAnimationComplete}
+          transition={{
+            duration: 2.5,
+            ease: [0.25, 0.46, 0.45, 0.94], // elegant decelerating ease
+          }}
+        >
+          {/* Morphing glowing music icon with shadow and pulse */}
+          <div className="relative w-12 h-12 flex items-center justify-center bg-gradient-to-tr from-emerald-400 to-primary-500 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.7)] border border-emerald-300/30 animate-pulse">
+            <span className="text-xl text-white select-none">🎵</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Trailing Sparkle Particles */}
+      {sparkles.map((s) => (
+        <motion.div
+          key={s.id}
+          className="fixed pointer-events-none z-[129] text-xs filter drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]"
+          initial={{ x: s.x, y: s.y, opacity: 0.8, scale: s.scale }}
+          animate={{ opacity: 0, scale: 0, y: s.y - 12 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          ✨
+        </motion.div>
+      ))}
 
     </div>
   );
